@@ -43,7 +43,7 @@ impl Compiler {
         let source_lines: Vec<&str> = source.lines().collect();
         let mut statement_index = 0;
         
-        for (i, statement) in statements.iter().enumerate() {
+        for (_i, statement) in statements.iter().enumerate() {
             // Find the actual line number of this statement in the source
             self.current_line = self.find_statement_line(&source_lines, statement_index);
             statement_index += 1;

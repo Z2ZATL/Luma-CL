@@ -2,12 +2,12 @@
 name = "luma-lang"
 version = "0.2.0"
 edition = "2021"
+description = "Luma JIT-VM Language with LLVM Backend"
+authors = ["Luma Dev Team"]
 
 [lib]
 name = "luma"
 path = "src/lib.rs"
-description = "Luma JIT-VM Language with LLVM Backend"
-authors = ["Luma Dev Team"]
 
 [[bin]]
 name = "luma"

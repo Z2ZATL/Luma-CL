@@ -31,6 +31,7 @@ impl Lexer {
         Ok(tokens)
     }
     
+    #[allow(dead_code)]
     pub fn get_current_line(&self) -> usize {
         self.line
     }
@@ -165,6 +166,7 @@ impl Lexer {
         }
     }
 
+    #[allow(dead_code)]
     fn skip_multiline_comment(&mut self) -> Result<(), LumaError> {
         let start_line = self.line;
         
