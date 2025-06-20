@@ -119,6 +119,7 @@ impl Lexer {
                 }
                 // Skip to end of line for both # and ##
                 self.skip_comment();
+                // Continue to next token
                 self.next_token()
             }
             _ if ch.is_ascii_digit() => {
@@ -168,28 +169,10 @@ impl Lexer {
 
     #[allow(dead_code)]
     fn skip_multiline_comment(&mut self) -> Result<(), LumaError> {
-        let start_line = self.line;
-        
-        while !self.is_at_end() {
-            if self.current_char() == '#' {
-                self.advance();
-                if !self.is_at_end() && self.current_char() == '#' {
-                    self.advance(); // Skip the closing ##
-                    return Ok(());
-                }
-            } else if self.current_char() == '\n' {
-                self.line += 1;
-                self.column = 1;
-                self.advance();
-            } else {
-                self.advance();
-            }
-        }
-        
-        Err(LumaError::lex_error(
-            "Unterminated multi-line comment".to_string(),
-            start_line
-        ))
+        // For now, treat ## as single-line comments since they don't need closing
+        // This matches the behavior in the main comment handler
+        self.skip_comment();
+        Ok(())
     }
 
     fn read_number(&mut self) -> Result<Token, LumaError> {

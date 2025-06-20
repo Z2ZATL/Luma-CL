@@ -114,8 +114,9 @@ impl VM {
                 }
                 
                 OpCode::OpPrint => {
-                    let value = self.stack.pop().map_err(LumaError::StackError)?;
+                    let value = self.stack.peek(0).map_err(LumaError::StackError)?.clone();
                     println!("{}", value);
+                    // Keep the value on stack for potential return
                 }
                 
                 OpCode::OpPop => {

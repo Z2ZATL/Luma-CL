@@ -14,7 +14,7 @@ fn run_code(source: &str) -> Result<Value, String> {
     let statements = parser.parse().map_err(|e| e.to_string())?;
 
     let mut compiler = Compiler::new();
-    let chunk = compiler.compile(&statements).map_err(|e| e.to_string())?;
+    let chunk = compiler.compile_with_source(&statements, source).map_err(|e| e.to_string())?;
 
     let mut vm = VM::new();
     vm.interpret(chunk).map_err(|e| e.to_string())
@@ -124,4 +124,63 @@ fn test_complex_variable_expression() {
     "#;
     let result = run_code(source).unwrap();
     assert_eq!(result, Value::Number(16.0)); // (5+3) * (5-3) = 8 * 2 = 16
+}
+
+// === Comment Tests ===
+
+#[test]
+fn test_comments_are_ignored() {
+    // Read test file with various comment styles
+    let source = std::fs::read_to_string("tests/test_comments.luma").unwrap();
+    
+    // Expected: should execute and return result of "show 20 + 5" = 25
+    let result = run_code(&source).unwrap();
+    assert_eq!(result, Value::Number(25.0));
+}
+
+#[test]
+fn test_comment_at_end_of_expression() {
+    let source = "show 42 # This is the answer";
+    let result = run_code(source).unwrap();
+    assert_eq!(result, Value::Number(42.0));
+}
+
+#[test]
+fn test_single_line_comment() {
+    let source = r#"
+        # This is a comment line
+        show 100
+        # Another comment
+    "#;
+    let result = run_code(source).unwrap();
+    assert_eq!(result, Value::Number(100.0));
+}
+
+#[test]
+fn test_multiline_comment_blocks() {
+    let source = r#"
+        ##
+        ## This is a multi-line comment block
+        ## with multiple lines of text
+        ##
+        show 55
+        ##
+        ## Another comment block
+        ##
+    "#;
+    let result = run_code(source).unwrap();
+    assert_eq!(result, Value::Number(55.0));
+}
+
+#[test]
+fn test_mixed_comment_styles() {
+    let source = r#"
+        ## Multi-line comment start
+        let x be 10  # Single line comment after code
+        ## Multi-line comment end
+        # Pure single line comment
+        show x * 2   ## Another comment style ## 
+    "#;
+    let result = run_code(source).unwrap();
+    assert_eq!(result, Value::Number(20.0));
 }
