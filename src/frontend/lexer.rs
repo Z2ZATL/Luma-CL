@@ -30,6 +30,10 @@ impl Lexer {
         tokens.push(Token::Eof);
         Ok(tokens)
     }
+    
+    pub fn get_current_line(&self) -> usize {
+        self.line
+    }
 
     fn next_token(&mut self) -> Result<Option<Token>, LumaError> {
         self.skip_whitespace();

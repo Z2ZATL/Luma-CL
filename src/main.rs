@@ -105,7 +105,8 @@ fn execute_source_vm(source: &str, vm: &mut VM) -> Result<()> {
     let statements = parser.parse()?;
     
     let mut compiler = Compiler::new();
-    let chunk = compiler.compile(&statements)?;
+    // Pass source code to compiler for accurate line tracking
+    let chunk = compiler.compile_with_source(&statements, source)?;
     
     // Backend: Execute on VM
     vm.interpret(chunk)?;

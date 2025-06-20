@@ -39,6 +39,48 @@ impl Compiler {
         Ok(std::mem::take(&mut self.chunk))
     }
     
+    pub fn compile_with_source(&mut self, statements: &[Statement], source: &str) -> Result<Chunk> {
+        let source_lines: Vec<&str> = source.lines().collect();
+        let mut statement_index = 0;
+        
+        for (i, statement) in statements.iter().enumerate() {
+            // Find the actual line number of this statement in the source
+            self.current_line = self.find_statement_line(&source_lines, statement_index);
+            statement_index += 1;
+            self.compile_statement(statement)?;
+        }
+        
+        // Ensure the chunk ends with a return
+        self.emit_opcode(OpCode::OpReturn, self.current_line);
+        
+        Ok(std::mem::take(&mut self.chunk))
+    }
+    
+    fn find_statement_line(&self, source_lines: &[&str], statement_index: usize) -> usize {
+        let mut statement_count = 0;
+        
+        for (line_num, line) in source_lines.iter().enumerate() {
+            let trimmed = line.trim();
+            // Skip empty lines and comments
+            if trimmed.is_empty() || trimmed.starts_with('#') {
+                continue;
+            }
+            
+            // Count actual statements
+            if trimmed.starts_with("let ") || trimmed.starts_with("show ") || 
+               trimmed.starts_with("if ") || trimmed.starts_with("while ") || 
+               trimmed.starts_with("repeat ") {
+                if statement_count == statement_index {
+                    return line_num + 1; // Convert to 1-based line number
+                }
+                statement_count += 1;
+            }
+        }
+        
+        // Fallback estimation
+        self.estimate_statement_line(statement_index + 1)
+    }
+    
     fn estimate_statement_line(&self, statement_index: usize) -> usize {
         // Better estimation that accounts for comments and empty lines
         // Each statement is roughly 2 lines apart (allowing for comments)
