@@ -63,19 +63,24 @@
             border: 2px solid #333;
             border-radius: 8px;
             overflow: hidden;
+            height: 300px;
         }
 
         .line-numbers {
             background: #2a2a2a;
             color: #666;
             padding: 15px 8px 15px 15px;
-            font-family: inherit;
+            font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
             font-size: 14px;
             line-height: 1.5;
             text-align: right;
             user-select: none;
             border-right: 1px solid #444;
             min-width: 40px;
+            overflow: hidden;
+            white-space: pre-line;
+            height: 100%;
+            box-sizing: border-box;
         }
 
         .section-title {
@@ -87,18 +92,21 @@
         }
 
         #lumaCode {
-            width: 100%;
-            height: 300px;
+            flex: 1;
+            height: 100%;
             background: transparent;
             border: none;
             color: #fff;
             padding: 15px;
-            font-family: inherit;
+            font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
             font-size: 14px;
             line-height: 1.5;
             resize: none;
             outline: none;
             overflow-y: auto;
+            white-space: pre-wrap;
+            tab-size: 4;
+            box-sizing: border-box;
         }
 
         .editor-container:focus-within {
@@ -524,13 +532,22 @@ show x + 10`
         function updateLineNumbers() {
             const textarea = document.getElementById('lumaCode');
             const lineNumbers = document.getElementById('lineNumbers');
-            const lines = textarea.value.split('\n').length;
+            const lines = textarea.value.split('\n');
             
             let numbers = '';
-            for (let i = 1; i <= lines; i++) {
-                numbers += i + '\n';
+            for (let i = 1; i <= lines.length; i++) {
+                numbers += i;
+                if (i < lines.length) {
+                    numbers += '\n';
+                }
             }
-            lineNumbers.textContent = numbers.trim();
+            lineNumbers.textContent = numbers;
+            
+            // Ensure line numbers have same height as textarea
+            const textareaStyle = window.getComputedStyle(textarea);
+            lineNumbers.style.lineHeight = textareaStyle.lineHeight;
+            lineNumbers.style.fontSize = textareaStyle.fontSize;
+            lineNumbers.style.fontFamily = textareaStyle.fontFamily;
         }
 
         function clearCode() {
