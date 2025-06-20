@@ -1,0 +1,15 @@
+# Arithmetic operations in Luma JIT-VM
+let a be 15
+let b be 4
+
+show "a = " + a
+show "b = " + b
+show "a + b = " + (a + b)
+show "a - b = " + (a - b)
+show "a * b = " + (a * b)
+show "a / b = " + (a / b)
+show "a % b = " + (a % b)
+
+# Complex expressions
+let result be (a + b) * 2 - (a / b)
+show "Complex result = " + result

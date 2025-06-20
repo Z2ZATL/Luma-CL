@@ -1,0 +1,23 @@
+# === PHASE 2: Variables and State Tests ===
+
+# Test Case 11: Variable Declaration and Retrieval
+let price be 2500
+show price
+
+# Test Case 12: Using Variable in Expression
+let quantity be 4
+show price * quantity
+
+# Test Case 13: Variable Reassignment
+price is 3000
+show price
+
+# Test Case 14: Multiple Variables
+let x be 10
+let y be 20
+show x + y
+
+# Test Case 15: Variable in Complex Expression
+let a be 5
+let b be 3
+show (a + b) * (a - b)

@@ -1,0 +1,16 @@
+# Variable operations in Luma JIT-VM
+let x be 42
+let y be 10.5
+let name be "Luma"
+
+show "x = " + x
+show "y = " + y
+show "name = " + name
+
+# Variable reassignment
+x = x + y
+show "After addition: x = " + x
+
+# Boolean variables
+let flag be true
+show "flag = " + flag

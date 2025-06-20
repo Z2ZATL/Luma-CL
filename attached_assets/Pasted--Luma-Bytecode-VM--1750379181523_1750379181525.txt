@@ -1,0 +1,335 @@
+ยอดเยี่ยมเลยครับ! เราจะมาเริ่มสร้างรากฐานที่สำคัญที่สุดของ Luma ยุคใหม่กัน นั่นคือ **Bytecode VM**
+
+ต่อไปนี้คือแผนการพัฒนาทั้งหมดอย่างละเอียด โดยจะโฟกัสเฉพาะส่วนที่จำเป็นในการสร้าง Bytecode VM ให้ทำงานได้ก่อน เราจะยังไม่ยุ่งกับ JIT Compiler ในขั้นตอนนี้ครับ
+
+คุณจะต้องสร้างไฟล์ใหม่และแก้ไขไฟล์เดิมตามนี้:
+
+### **ขั้นตอนที่ 1: สร้างโครงสร้างข้อมูลพื้นฐาน (The Foundation)**
+
+เราต้องนิยาม "ข้อมูล" และ "คำสั่ง" ที่ VM ของเราจะทำงานด้วยก่อน
+
+#### 1.1 **ไฟล์ที่จะสร้าง: `src/shared/value.rs`**
+
+* **หน้าที่:** นิยามประเภทของ "ค่า" (Value) ทั้งหมดที่ภาษา Luma สามารถมีได้
+* **โค้ดที่จะพัฒนา:**
+    ```rust
+    // in src/shared/value.rs
+    #[derive(Debug, Clone, PartialEq)] // PartialEq สำหรับการเปรียบเทียบค่า
+    pub enum Value {
+        Number(f64),
+        LumaString(String),
+        Boolean(bool),
+        Nil, // ค่าที่แสดงว่า "ไม่มีค่า" เหมือน null
+    }
+
+    // เพิ่มฟังก์ชันสำหรับแสดงผลค่าเหล่านี้ให้สวยงาม
+    impl std::fmt::Display for Value {
+        fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+            match self {
+                Value::Number(n) => write!(f, "{}", n),
+                Value::LumaString(s) => write!(f, "{}", s),
+                Value::Boolean(b) => write!(f, "{}", b),
+                Value::Nil => write!(f, "nil"),
+            }
+        }
+    }
+    ```
+
+#### 1.2 **ไฟล์ที่จะสร้าง: `src/backend/vm/instruction.rs`**
+
+* **หน้าที่:** นิยามชุดคำสั่ง **Bytecode (OpCode)** ทั้งหมดที่ VM ของเราจะเข้าใจ
+* **โค้ดที่จะพัฒนา:**
+    ```rust
+    // in src/backend/vm/instruction.rs
+
+    // ใช้ #[repr(u8)] เพื่อบอกให้ Rust เก็บ enum นี้เป็นตัวเลข 8-bit
+    // ซึ่งทำให้แปลงไปมาระหว่างตัวเลขกับ OpCode ได้ง่าย
+    #[repr(u8)]
+    #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+    pub enum OpCode {
+        // --- คำสั่งพื้นฐาน ---
+        OpConstant, // โหลดค่าคงที่จาก "Constant Pool" มาไว้บน Stack
+        OpReturn,   // จบการทำงานและคืนค่า
+
+        // --- คำสั่งทางคณิตศาสตร์ ---
+        OpAdd,
+        OpSubtract,
+        OpMultiply,
+        OpDivide,
+        OpNegate, // ทำให้ค่าเป็นลบ (เช่น -x)
+
+        // เพิ่ม OpCode อื่นๆ ในอนาคต...
+    }
+
+    // ฟังก์ชันช่วยแปลง u8 กลับมาเป็น OpCode
+    impl From<u8> for OpCode {
+        fn from(byte: u8) -> Self {
+            unsafe { std::mem::transmute(byte) }
+        }
+    }
+    ```
+
+#### 1.3 **ไฟล์ที่จะสร้าง: `src/shared/chunk.rs`**
+
+* **หน้าที่:** สร้าง "Chunk" หรือตู้คอนเทนเนอร์สำหรับเก็บ Bytecode ที่คอมไพล์เสร็จแล้ว
+* **โค้ดที่จะพัฒนา:**
+    ```rust
+    // in src/shared/chunk.rs
+    use crate::backend::vm::instruction::OpCode;
+    use crate::shared::value::Value;
+
+    pub struct Chunk {
+        pub code: Vec<u8>,             // ที่เก็บ Bytecode ทั้งหมด
+        pub constants: Vec<Value>,     // "Constant Pool" - ที่เก็บค่าคงที่ (ตัวเลข, string)
+        pub lines: Vec<usize>,         // สำหรับ Debug: บอกว่า Bytecode แต่ละตัวมาจากโค้ดบรรทัดไหน
+    }
+
+    impl Chunk {
+        pub fn new() -> Self {
+            Self {
+                code: Vec::new(),
+                constants: Vec::new(),
+                lines: Vec::new(),
+            }
+        }
+
+        // ฟังก์ชันสำหรับเขียน Bytecode ลงใน chunk
+        pub fn write(&mut self, byte: u8, line: usize) {
+            self.code.push(byte);
+            self.lines.push(line);
+        }
+
+        // ฟังก์ชันสำหรับเพิ่มค่าคงที่และ trả về index ของมัน
+        pub fn add_constant(&mut self, value: Value) -> u8 {
+            self.constants.push(value);
+            // คืนค่า index (ต้องจัดการกรณีที่มีค่าคงที่เกิน 256 ค่าในภายหลัง)
+            (self.constants.len() - 1) as u8
+        }
+    }
+    ```
+
+---
+
+### **ขั้นตอนที่ 2: สร้าง Compiler (ตัวแปลง AST เป็น Bytecode)**
+
+นี่คือส่วนที่จะมาแทนที่ `interpreter.rs` เดิมโดยสิ้นเชิง
+
+#### 2.1 **ไฟล์ที่จะสร้าง: `src/frontend/compiler.rs`**
+
+* **หน้าที่:** เดินโครงสร้าง AST แล้วสร้าง Bytecode Chunk ออกมา
+* **โค้ดที่จะพัฒนา (โครงสร้างเบื้องต้น):**
+    ```rust
+    // in src/frontend/compiler.rs
+    use crate::frontend::ast::{Statement, Expression};
+    use crate::shared::chunk::Chunk;
+    use crate::shared::value::Value;
+    use crate::backend::vm::instruction::OpCode;
+
+    pub struct Compiler {
+        chunk: Chunk,
+    }
+
+    impl Compiler {
+        pub fn new() -> Self {
+            Self { chunk: Chunk::new() }
+        }
+
+        // ฟังก์ชันหลัก: รับ AST แล้วคืนค่าเป็น Chunk ที่คอมไพล์แล้ว
+        pub fn compile(&mut self, statements: Vec<Statement>) -> Result<Chunk, String> {
+            for stmt in statements {
+                self.compile_statement(&stmt)?;
+            }
+            // เมื่อจบแล้ว ให้เพิ่ม OpReturn เพื่อบอก VM ว่าทำงานเสร็จแล้ว
+            self.emit_byte(OpCode::OpReturn as u8);
+            Ok(std::mem::replace(&mut self.chunk, Chunk::new())) // ส่ง chunk ออกไปและสร้างอันใหม่
+        }
+
+        fn compile_statement(&mut self, stmt: &Statement) -> Result<(), String> {
+            match stmt {
+                Statement::Show(expr) => {
+                    self.compile_expression(expr)?;
+                    // Bytecode สำหรับ 'show' อาจจะเป็น OpPrint ในอนาคต
+                    // แต่ตอนนี้เราจะใช้ OpReturn เพื่อดูผลลัพธ์บน Stack ก่อน
+                    Ok(())
+                }
+                // จัดการกับ Statement อื่นๆ เช่น Assignment
+                _ => Err("Statement not yet implemented.".to_string()),
+            }
+        }
+
+        fn compile_expression(&mut self, expr: &Expression) -> Result<(), String> {
+            match expr {
+                Expression::Literal(n) => {
+                    self.emit_constant(Value::Number(*n))?;
+                }
+                Expression::BinaryOp { left, operator, right } => {
+                    self.compile_expression(left)?;
+                    self.compile_expression(right)?;
+                    match operator {
+                        // แปลง operator ใน AST ให้เป็น Bytecode
+                        crate::ast::BinaryOperator::Add => self.emit_byte(OpCode::OpAdd as u8),
+                        crate::ast::BinaryOperator::Subtract => self.emit_byte(OpCode::OpSubtract as u8),
+                        crate::ast::BinaryOperator::Multiply => self.emit_byte(OpCode::OpMultiply as u8),
+                        crate::ast::BinaryOperator::Divide => self.emit_byte(OpCode::OpDivide as u8),
+                        _ => return Err("Operator not yet implemented".to_string()),
+                    }
+                }
+                // จัดการ Expression อื่นๆ
+                _ => return Err("Expression not yet implemented".to_string()),
+            }
+            Ok(())
+        }
+
+        // --- ฟังก์ชันช่วย ---
+        fn emit_byte(&mut self, byte: u8) {
+            self.chunk.write(byte, 0); // TODO: ใส่เลขบรรทัดจริง
+        }
+
+        fn emit_bytes(&mut self, byte1: u8, byte2: u8) {
+            self.emit_byte(byte1);
+            self.emit_byte(byte2);
+        }
+
+        fn emit_constant(&mut self, value: Value) -> Result<(), String> {
+            let const_index = self.chunk.add_constant(value);
+            self.emit_bytes(OpCode::OpConstant as u8, const_index);
+            Ok(())
+        }
+    }
+    ```
+
+---
+
+### **ขั้นตอนที่ 3: สร้าง Virtual Machine (ตัวรัน Bytecode)**
+
+#### 3.1 **ไฟล์ที่จะสร้าง: `src/backend/vm/vm.rs`**
+
+* **หน้าที่:** รับ `Chunk` ที่คอมไพล์แล้วมาประมวลผลทีละคำสั่ง
+* **โค้ดที่จะพัฒนา:**
+    ```rust
+    // in src/backend/vm/vm.rs
+    use crate::shared::chunk::Chunk;
+    use crate::shared::value::Value;
+    use crate::backend::vm::instruction::OpCode;
+
+    const STACK_MAX: usize = 256;
+
+    pub struct VM {
+        chunk: Chunk,
+        ip: usize, // Instruction Pointer
+        stack: [Value; STACK_MAX],
+        stack_top: usize,
+    }
+
+    impl VM {
+        pub fn new() -> Self {
+            Self {
+                chunk: Chunk::new(),
+                ip: 0,
+                stack: [Value::Nil; STACK_MAX], // ต้องมีวิธีสร้างค่าเริ่มต้น
+                stack_top: 0,
+            }
+        }
+
+        pub fn interpret(&mut self, chunk: Chunk) -> Result<(), String> {
+            self.chunk = chunk;
+            self.ip = 0;
+            self.run()
+        }
+
+        // Loop หลักของ VM
+        fn run(&mut self) -> Result<(), String> {
+            loop {
+                let instruction = self.read_byte();
+                match OpCode::from(instruction) {
+                    OpCode::OpReturn => {
+                        // เมื่อจบการทำงาน, พิมพ์ค่าที่อยู่บนสุดของ stack ออกมาเพื่อตรวจสอบ
+                        println!("VM Finished. Result: {}", self.pop());
+                        return Ok(());
+                    }
+                    OpCode::OpConstant => {
+                        let const_index = self.read_byte() as usize;
+                        let constant = self.chunk.constants[const_index].clone();
+                        self.push(constant);
+                    }
+                    OpCode::OpAdd => self.binary_op(|a, b| Value::Number(a + b))?,
+                    OpCode::OpSubtract => self.binary_op(|a, b| Value::Number(a - b))?,
+                    OpCode::OpMultiply => self.binary_op(|a, b| Value::Number(a * b))?,
+                    OpCode::OpDivide => self.binary_op(|a, b| Value::Number(a / b))?,
+                    // จัดการ OpCode อื่นๆ...
+                }
+            }
+        }
+
+        // --- ฟังก์ชันจัดการ Stack ---
+        fn push(&mut self, value: Value) {
+            self.stack[self.stack_top] = value;
+            self.stack_top += 1;
+        }
+
+        fn pop(&mut self) -> Value {
+            self.stack_top -= 1;
+            std::mem::replace(&mut self.stack[self.stack_top], Value::Nil)
+        }
+        
+        // --- ฟังก์ชันช่วย ---
+        fn read_byte(&mut self) -> u8 {
+            let byte = self.chunk.code[self.ip];
+            self.ip += 1;
+            byte
+        }
+
+        // ฟังก์ชันสำหรับจัดการ Binary Operation เพื่อลดโค้ดซ้ำซ้อน
+        fn binary_op<F>(&mut self, op: F) -> Result<(), String>
+        where
+            F: Fn(f64, f64) -> Value,
+        {
+            let b_val = self.pop();
+            let a_val = self.pop();
+            if let (Value::Number(a), Value::Number(b)) = (a_val, b_val) {
+                let result = op(a, b);
+                self.push(result);
+                Ok(())
+            } else {
+                Err("Operands must be numbers.".to_string())
+            }
+        }
+    }
+    ```
+
+---
+
+### **ขั้นตอนที่ 4: ปรับปรุง `main.rs` ให้ใช้สถาปัตยกรรมใหม่**
+
+* **หน้าที่:** เปลี่ยน "ท่อ" การทำงานใหม่ทั้งหมด
+* **โค้ดที่จะแก้ไข:**
+    ```rust
+    // in src/main.rs
+    // ... (ลบ import ของ interpreter เก่าทิ้งไป)
+    use crate::frontend::lexer::Lexer;
+    use crate::frontend::parser::Parser;
+    use crate::frontend::compiler::Compiler; // <-- import ตัวใหม่
+    use crate::backend::vm::vm::VM;           // <-- import ตัวใหม่
+
+    fn execute_source(source: &str) -> Result<(), String> {
+        // --- ส่วน Frontend ---
+        let mut lexer = Lexer::new(source);
+        let tokens = lexer.tokenize().map_err(|e| e.to_string())?;
+        
+        let mut parser = Parser::new(tokens);
+        let statements = parser.parse().map_err(|e| e.to_string())?;
+
+        // --- คอมไพล์ AST เป็น Bytecode ---
+        let mut compiler = Compiler::new();
+        let chunk = compiler.compile(statements)?; // <-- ได้ chunk ออกมา
+
+        // --- ส่วน Backend: รัน Bytecode ด้วย VM ---
+        let mut vm = VM::new();
+        vm.interpret(chunk)?; // <-- ส่ง chunk ให้ VM ทำงาน
+
+        Ok(())
+    }
+    // ... (ส่วนอื่นๆ ของ main.rs ที่เรียก execute_source) ...
+    ```
+
+เมื่อคุณทำตามขั้นตอนทั้งหมดนี้เสร็จ คุณจะได้ Bytecode VM พื้นฐานที่สามารถรับโค้ด Luma, คอมไพล์, และรันการคำนวณง่ายๆ ได้แล้ว นี่คือรากฐานที่มั่นคงและทรงพลังสำหรับต่อยอดฟีเจอร์อื่นๆ และ JIT Compiler ในอนาคตครับ

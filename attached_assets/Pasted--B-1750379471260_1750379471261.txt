@@ -1,0 +1,189 @@
+ยอดเยี่ยมครับ การมีชุดทดสอบที่ดีคือหัวใจสำคัญของการพัฒนาที่มั่นคง นี่คือคำสั่งและโค้ดสำหรับทดสอบ **Bytecode VM** ที่เราเพิ่งออกแบบกันไปครับ
+
+เราจะสร้างไฟล์ทดสอบใหม่ของ Rust ซึ่งจะทำหน้าที่เหมือนผู้ใช้: ป้อนโค้ด Luma เข้าไป แล้วตรวจสอบว่าผลลัพธ์ที่ VM คืนค่ากลับมานั้นถูกต้องหรือไม่
+
+### **ขั้นตอนที่ 1: ปรับปรุง VM ให้ง่ายต่อการทดสอบ**
+
+ก่อนอื่น เราจะแก้ไข `vm.rs` และ `compiler.rs` เล็กน้อยเพื่อให้การทดสอบทำได้ง่ายขึ้น โดยไม่ต้องวุ่นวายกับการดักจับ `stdout`
+
+#### 1.1 **เพิ่ม `OpPrint` และแก้ไข `OpReturn`**
+
+1.  **ไฟล์ที่จะแก้ไข:** `src/backend/vm/instruction.rs`
+    * **สิ่งที่ต้องทำ:** เพิ่ม `OpPrint` เพื่อจัดการคำสั่ง `show` โดยเฉพาะ
+    ```rust
+    // ... inside OpCode enum
+    pub enum OpCode {
+        // ...
+        OpReturn,   // จบการทำงาน (ไม่คืนค่า)
+        OpPrint,    // พิมพ์ค่าบนสุดของ Stack
+        // ...
+    }
+    ```
+
+2.  **ไฟล์ที่จะแก้ไข:** `src/frontend/compiler.rs`
+    * **สิ่งที่ต้องทำ:** แก้ไข `compile_statement` ให้ใช้ `OpPrint` สำหรับ `Statement::Show`
+    ```rust
+    // ... inside compile_statement
+    Statement::Show(expr) => {
+        self.compile_expression(expr)?;
+        self.emit_byte(OpCode::OpPrint as u8); // <-- เปลี่ยนเป็น OpPrint
+        Ok(())
+    }
+    // ...
+    ```
+
+#### 1.2 **ทำให้ VM คืนค่าผลลัพธ์สุดท้าย**
+
+เราจะแก้ให้ `interpret` คืนค่า `Value` ที่อยู่บนสุดของ Stack เมื่อทำงานเสร็จ เพื่อให้เรานำไป `assert` ในเทสได้
+
+* **ไฟล์ที่จะแก้ไข:** `src/backend/vm/vm.rs`
+* **สิ่งที่ต้องทำ:**
+    1.  เปลี่ยน Signature ของ `interpret` ให้คืนค่า `Result<Value, String>`
+    2.  เพิ่มการจัดการ `OpPrint`
+    3.  เปลี่ยน `OpReturn` ให้คืนค่าจาก Stack
+
+```rust
+// in src/backend/vm/vm.rs
+
+// ... (struct VM) ...
+
+impl VM {
+    // ...
+
+    // แก้ไข Signature ให้คืนค่า Value
+    pub fn interpret(&mut self, chunk: Chunk) -> Result<Value, String> {
+        self.chunk = chunk;
+        self.ip = 0;
+        self.stack_top = 0; // Reset stack top
+        self.run()
+    }
+
+    fn run(&mut self) -> Result<Value, String> {
+        loop {
+            // ...
+            match OpCode::from(instruction) {
+                OpCode::OpReturn => {
+                    // คืนค่าสุดท้ายที่อยู่บนสุดของ Stack ออกไป
+                    return Ok(self.pop());
+                }
+                OpCode::OpPrint => {
+                    // สำหรับคำสั่ง show, พิมพ์ค่าออกทาง console
+                    println!("{}", self.peek(0));
+                    // ไม่ต้อง pop ค่าออก เพราะ show ควรคืนค่า expression ของมัน
+                }
+                // ... (OpConstant, OpAdd, etc. as before)
+            }
+        }
+    }
+
+    // ... (push, pop, etc.) ...
+
+    // ฟังก์ชันช่วย peek ดูค่าใน stack โดยไม่เอาออก
+    fn peek(&self, distance: usize) -> &Value {
+        &self.stack[self.stack_top - 1 - distance]
+    }
+}
+```
+
+---
+
+### **ขั้นตอนที่ 2: สร้างไฟล์ทดสอบสำหรับ VM**
+
+#### 2.1 **สร้างไฟล์ทดสอบใหม่**
+
+* **สร้างไฟล์:** `tests/vm_test.rs` (หรือชื่ออื่นที่เหมาะสม)
+* **เพิ่มใน `Cargo.toml` (ถ้าจำเป็น):**
+    ```toml
+    [[test]]
+    name = "vm_integration_test"
+    path = "tests/vm_test.rs"
+    ```
+
+#### 2.2 **เขียนโค้ดทดสอบ**
+
+* **ไฟล์ที่จะสร้าง:** `tests/vm_test.rs`
+* **หน้าที่:** สร้างฟังก์ชันทดสอบที่รันโค้ด Luma ผ่านสถาปัตยกรรมใหม่ทั้งหมด ตั้งแต่ Lexer -> Parser -> Compiler -> VM แล้วเปรียบเทียบผลลัพธ์
+
+```rust
+// in tests/vm_test.rs
+
+// ต้อง import ทุกอย่างที่จำเป็นจากโปรเจกต์ของคุณ
+use luma_interpreter::frontend::lexer::Lexer;
+use luma_interpreter::frontend::parser::Parser;
+use luma_interpreter::frontend::compiler::Compiler;
+use luma_interpreter::backend::vm::vm::VM;
+use luma_interpreter::shared::value::Value;
+
+// ฟังก์ชัน Helper เพื่อลดโค้ดซ้ำซ้อน
+fn run_code(source: &str) -> Result<Value, String> {
+    let mut lexer = Lexer::new(source);
+    let tokens = lexer.tokenize().map_err(|e| e.to_string())?;
+
+    let mut parser = Parser::new(tokens);
+    let statements = parser.parse().map_err(|e| e.to_string())?;
+
+    let mut compiler = Compiler::new();
+    let chunk = compiler.compile(statements)?;
+
+    let mut vm = VM::new();
+    vm.interpret(chunk)
+}
+
+// === ชุดทดสอบ ===
+
+#[test]
+fn test_simple_number_expression() {
+    let source = "show 123"; // AST: Show(Literal(123)) -> Bytecode: OpConstant(123), OpPrint, OpReturn
+    let result = run_code(source).unwrap();
+    assert_eq!(result, Value::Number(123.0));
+}
+
+#[test]
+fn test_simple_arithmetic() {
+    let source = "show 10 + 5"; // Result should be 15
+    let result = run_code(source).unwrap();
+    assert_eq!(result, Value::Number(15.0));
+}
+
+#[test]
+fn test_operator_precedence() {
+    // ทดสอบว่า 2 * 5 จะทำงานก่อน 10 +
+    let source = "show 10 + 2 * 5"; // 10 + 10 = 20
+    let result = run_code(source).unwrap();
+    assert_eq!(result, Value::Number(20.0));
+}
+
+#[test]
+fn test_parentheses_expression() {
+    // ทดสอบว่าวงเล็บเปลี่ยนลำดับการทำงาน
+    let source = "show (10 + 2) * 5"; // 12 * 5 = 60
+    let result = run_code(source).unwrap();
+    assert_eq!(result, Value::Number(60.0));
+}
+
+#[test]
+fn test_unary_negate() {
+    // เพิ่มการจัดการ Unary Op ใน Compiler และ VM ก่อน
+    // let source = "show -5";
+    // let result = run_code(source).unwrap();
+    // assert_eq!(result, Value::Number(-5.0));
+}
+
+#[test]
+fn test_complex_expression() {
+    let source = "show (100 - 20) / (2 + 2) + 5 * 2"; // 80 / 4 + 10  -> 20 + 10 = 30
+    let result = run_code(source).unwrap();
+    assert_eq!(result, Value::Number(30.0));
+}
+```
+
+### **ขั้นตอนที่ 3: รันคำสั่งทดสอบ**
+
+เปิด Terminal แล้วรันคำสั่ง:
+```bash
+cargo test
+```
+
+ถ้าทุกอย่างถูกต้อง, `cargo test` จะคอมไพล์โค้ดของคุณรวมถึงไฟล์ทดสอบใหม่นี้ และรันฟังก์ชันทดสอบทั้งหมด ผลลัพธ์ควรจะแสดงว่าเทสทั้งหมด `passed`
+
+ชุดทดสอบนี้จะเป็นเครื่องมือสำคัญในการตรวจสอบว่า VM ของคุณทำงานได้ถูกต้องทุกครั้งที่คุณเพิ่มฟีเจอร์ใหม่ๆ เข้าไปครับ

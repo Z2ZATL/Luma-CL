@@ -1,0 +1,12 @@
+# Performance test for JIT-VM hotspot detection
+let iterations be 1000
+let result be 0
+let i be 0
+
+# This loop should become a JIT hotspot
+while i < iterations then
+    result = result + (i * 2) + (i / 3)
+    i = i + 1
+
+show "Performance test completed"
+show "Result: " + result

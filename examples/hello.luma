@@ -1,0 +1,5 @@
+# Hello World in Luma JIT-VM
+show "Hello, Luma JIT-VM!"
+
+let name be "World"
+show "Hello, " + name + "!"

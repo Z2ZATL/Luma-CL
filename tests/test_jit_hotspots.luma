@@ -1,0 +1,23 @@
+# JIT hotspot detection tests
+
+# Create a computation-heavy loop that should trigger JIT compilation
+let n be 5000
+let sum be 0
+let i be 0
+
+# This should become a hot loop
+while i < n then
+    sum = sum + (i * i) - (i / 2) + (i % 3)
+    i = i + 1
+
+show "JIT hotspot test completed"
+show "Sum: " + sum
+
+# Another hotspot candidate
+let factorial be 1
+let j be 1
+while j <= 10 then
+    factorial = factorial * j
+    j = j + 1
+
+show "Factorial of 10: " + factorial

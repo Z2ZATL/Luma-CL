@@ -1,0 +1,26 @@
+# Core VM functionality tests
+
+# Test 1: Basic arithmetic
+let test1 be 10 + 20 * 2
+show "Test 1 (10 + 20 * 2): " + test1
+
+# Test 2: Variable assignment and access
+let x be 42
+x = x + 8
+show "Test 2 (42 + 8): " + x
+
+# Test 3: String operations
+let greeting be "Hello"
+let target be "VM"
+show "Test 3: " + greeting + " " + target
+
+# Test 4: Boolean logic
+let flag be true
+if flag then
+    show "Test 4: Boolean true works"
+
+# Test 5: Simple loop
+let count be 0
+repeat 3 times then
+    count = count + 1
+show "Test 5 loop count: " + count

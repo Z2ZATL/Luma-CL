@@ -1,0 +1,31 @@
+# === PHASE 1: Basic VM Functionality Tests ===
+
+# Test Case 1: Positive Integer
+show 42
+
+# Test Case 2: Floating Point Number  
+show 3.14159
+
+# Test Case 3: Zero
+show 0
+
+# Test Case 4: Addition
+show 100 + 25
+
+# Test Case 5: Subtraction
+show 100 - 25
+
+# Test Case 6: Multiplication
+show 10 * 5
+
+# Test Case 7: Division
+show 100 / 4
+
+# Test Case 8: Multiplication before Addition
+show 10 + 5 * 2
+
+# Test Case 9: Division before Subtraction  
+show 20 - 8 / 2
+
+# Test Case 10: Overriding Precedence with Parentheses
+show (10 + 5) * 2

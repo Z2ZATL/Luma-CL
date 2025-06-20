@@ -1,0 +1,112 @@
+แน่นอนครับ เพื่อให้การทดสอบระบบใหม่ของคุณครอบคลุมทุกแง่มุม ตั้งแต่พื้นฐานไปจนถึงส่วนที่ซับซ้อน ผมได้เตรียมชุด Syntax สำหรับทดสอบไว้ให้แล้ว โดยแบ่งออกเป็นเฟสต่างๆ ตามการพัฒนาของคุณครับ
+
+คุณสามารถนำโค้ดเหล่านี้ไปสร้างเป็นไฟล์ `.luma` หรือใช้ในไฟล์ test ของ Rust (`tests/vm_test.rs`) เพื่อตรวจสอบการทำงานของแต่ละฟีเจอร์ได้ทันที
+
+---
+
+### **เฟสที่ 1: การทดสอบพื้นฐานของ VM (Basic VM Functionality)**
+
+ชุดนี้ใช้สำหรับทดสอบหลังจากที่คุณ Implement `OpConstant`, `OpAdd`, `OpSubtract`, `OpMultiply`, `OpDivide`, และ `OpPrint` เรียบร้อยแล้ว
+
+#### **1.1 ทดสอบค่าคงที่ (Literals)**
+```luma
+# Test Case 1: Positive Integer
+show 42
+
+# Test Case 2: Floating Point Number
+show 3.14159
+
+# Test Case 3: Zero
+show 0
+```
+* **สิ่งที่คาดหวัง:** VM ควรจะสามารถโหลดค่าคงที่เหล่านี้ใส่ Stack และพิมพ์ออกมาได้อย่างถูกต้อง
+
+#### **1.2 ทดสอบการคำนวณพื้นฐาน (Basic Arithmetic)**
+```luma
+# Test Case 4: Addition
+show 100 + 25 # Expected: 125
+
+# Test Case 5: Subtraction
+show 100 - 25 # Expected: 75
+
+# Test Case 6: Multiplication
+show 10 * 5   # Expected: 50
+
+# Test Case 7: Division
+show 100 / 4  # Expected: 25
+```
+* **สิ่งที่คาดหวัง:** VM ควรจะ Pop ค่า 2 ตัวออกจาก Stack, คำนวณ, แล้ว Push ผลลัพธ์กลับเข้าไปใหม่
+
+#### **1.3 ทดสอบลำดับการทำงาน (Operator Precedence)**
+```luma
+# Test Case 8: Multiplication before Addition
+show 10 + 5 * 2 # Expected: 20 (5*2=10, 10+10=20)
+
+# Test Case 9: Division before Subtraction
+show 20 - 8 / 2 # Expected: 16 (8/2=4, 20-4=16)
+```
+* **สิ่งที่คาดหวัง:** Compiler ของคุณควรจะสร้าง Bytecode ตามลำดับความสำคัญของ Operator ที่ถูกต้อง
+
+#### **1.4 ทดสอบวงเล็บ (Parentheses)**
+```luma
+# Test Case 10: Overriding Precedence
+show (10 + 5) * 2 # Expected: 30
+```
+* **สิ่งที่คาดหวัง:** Parser และ Compiler ควรจะจัดการกับ Expression ที่อยู่ในวงเล็บก่อน
+
+---
+
+### **เฟสที่ 2: การทดสอบตัวแปรและสถานะ (Variables & State)**
+
+ชุดนี้ใช้หลังจากที่คุณ Implement `OpSetGlobal`, `OpGetGlobal` และอาจจะมี `OpSetLocal`, `OpGetLocal` ในอนาคต
+
+#### **2.1 ทดสอบตัวแปร Global**
+```luma
+# Test Case 11: Variable Declaration and Retrieval
+let price be 2500
+show price # Expected: 2500
+
+# Test Case 12: Using Variable in Expression
+let quantity be 4
+show price * quantity # Expected: 10000
+
+# Test Case 13: Reassignment
+price is 3000
+show price # Expected: 3000
+```
+* **สิ่งที่คาดหวัง:** VM ควรจะสามารถเก็บและดึงค่าจาก `HashMap` ของ Global ได้อย่างถูกต้อง
+
+---
+
+### **เฟสที่ 3: การทดสอบ Control Flow**
+
+ชุดนี้ใช้หลังจากที่คุณ Implement Bytecode สำหรับการกระโดด (Jump) เช่น `OpJump`, `OpJumpIfFalse`
+
+#### **3.1 ทดสอบเงื่อนไข If-Else**
+```luma
+# Test Case 14: If branch
+let score be 95
+if score > 90 then
+    show 1 # Expected: 1 (for 'true')
+
+# Test Case 15: Else branch
+if score < 50 then
+    show 1
+else
+    show 0 # Expected: 0 (for 'false')
+```
+* **สิ่งที่คาดหวัง:** `OpJumpIfFalse` ควรจะทำงานถูกต้อง โดยข้าม block ของ `then` เมื่อเงื่อนไขเป็นเท็จ และ `OpJump` ควรจะข้าม block ของ `else` เมื่อเงื่อนไขเป็นจริง
+
+#### **3.2 ทดสอบ Loop**
+```luma
+# Test Case 16: While Loop
+let i be 0
+let total be 0
+while i < 5 then # Loop 5 times (0, 1, 2, 3, 4)
+    total = total + i
+    i = i + 1
+show total # Expected: 10 (0+1+2+3+4)
+```
+* **สิ่งที่คาดหวัง:** `OpJump` และ `OpJumpIfFalse` (หรือ `OpLoop`) ต้องทำงานร่วมกันเพื่อสร้าง Loop ที่วนกลับไปเช็คเงื่อนไขและออกจาก Loop ได้อย่างถูกต้อง
+
+นำชุดทดสอบเหล่านี้ไปใช้เป็นแนวทางในการพัฒนาและตรวจสอบความถูกต้องของ Bytecode VM ของคุณได้เลยครับ!

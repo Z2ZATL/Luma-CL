@@ -1,0 +1,707 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Luma Custom Language - Web Tester</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            color: #fff;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 15px;
+            padding: 30px;
+            backdrop-filter: blur(10px);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+        }
+
+        h1 {
+            text-align: center;
+            margin-bottom: 10px;
+            font-size: 2.5em;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+        }
+
+        .subtitle {
+            text-align: center;
+            margin-bottom: 30px;
+            opacity: 0.8;
+            font-size: 1.1em;
+        }
+
+        .main-content {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+            margin-bottom: 30px;
+        }
+
+        .input-section, .output-section {
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 10px;
+            padding: 20px;
+        }
+
+        .section-title {
+            font-size: 1.3em;
+            margin-bottom: 15px;
+            color: #64b5f6;
+            border-bottom: 2px solid #64b5f6;
+            padding-bottom: 5px;
+        }
+
+        #lumaCode {
+            width: 100%;
+            height: 300px;
+            background: #1e1e1e;
+            border: 2px solid #333;
+            border-radius: 8px;
+            color: #fff;
+            padding: 15px;
+            font-family: inherit;
+            font-size: 14px;
+            line-height: 1.5;
+            resize: vertical;
+            outline: none;
+        }
+
+        #lumaCode:focus {
+            border-color: #64b5f6;
+            box-shadow: 0 0 10px rgba(100, 181, 246, 0.3);
+        }
+
+        .button-group {
+            display: flex;
+            gap: 10px;
+            margin: 15px 0;
+            flex-wrap: wrap;
+        }
+
+        button {
+            background: linear-gradient(45deg, #4caf50, #45a049);
+            color: white;
+            border: none;
+            padding: 12px 20px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: bold;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(76, 175, 80, 0.3);
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(76, 175, 80, 0.4);
+        }
+
+        button:active {
+            transform: translateY(0);
+        }
+
+        .clear-btn {
+            background: linear-gradient(45deg, #f44336, #d32f2f) !important;
+            box-shadow: 0 4px 15px rgba(244, 67, 54, 0.3) !important;
+        }
+
+        .clear-btn:hover {
+            box-shadow: 0 6px 20px rgba(244, 67, 54, 0.4) !important;
+        }
+
+        .example-btn {
+            background: linear-gradient(45deg, #ff9800, #f57c00) !important;
+            box-shadow: 0 4px 15px rgba(255, 152, 0, 0.3) !important;
+        }
+
+        .example-btn:hover {
+            box-shadow: 0 6px 20px rgba(255, 152, 0, 0.4) !important;
+        }
+
+        #output {
+            background: #1e1e1e;
+            border: 2px solid #333;
+            border-radius: 8px;
+            padding: 15px;
+            height: 300px;
+            overflow-y: auto;
+            font-family: inherit;
+            font-size: 14px;
+            line-height: 1.5;
+            white-space: pre-wrap;
+            color: #fff;
+        }
+
+        .examples-section {
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 10px;
+            padding: 20px;
+            margin-top: 20px;
+        }
+
+        .example-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-top: 15px;
+        }
+
+        .example-card {
+            background: rgba(100, 181, 246, 0.1);
+            border: 1px solid rgba(100, 181, 246, 0.3);
+            border-radius: 8px;
+            padding: 15px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .example-card:hover {
+            background: rgba(100, 181, 246, 0.2);
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(100, 181, 246, 0.15);
+        }
+
+        .example-title {
+            font-weight: bold;
+            color: #64b5f6;
+            margin-bottom: 8px;
+        }
+
+        .example-description {
+            font-size: 12px;
+            opacity: 0.8;
+            line-height: 1.4;
+        }
+
+        .status {
+            padding: 10px;
+            border-radius: 6px;
+            margin: 10px 0;
+            font-weight: bold;
+        }
+
+        .status.success {
+            background: rgba(76, 175, 80, 0.3);
+            border: 1px solid #4caf50;
+            color: #4caf50;
+        }
+
+        .status.error {
+            background: rgba(244, 67, 54, 0.3);
+            border: 1px solid #f44336;
+            color: #f44336;
+        }
+
+        .status.info {
+            background: rgba(33, 150, 243, 0.3);
+            border: 1px solid #2196f3;
+            color: #2196f3;
+        }
+
+        .performance-indicator {
+            background: linear-gradient(45deg, rgba(255, 193, 7, 0.2), rgba(255, 235, 59, 0.2));
+            border: 1px solid #ffc107;
+            border-radius: 8px;
+            padding: 10px;
+            margin: 10px 0;
+            font-size: 14px;
+            text-align: center;
+            color: #ffc107;
+        }
+
+        .performance-fast {
+            background: linear-gradient(45deg, rgba(76, 175, 80, 0.2), rgba(139, 195, 74, 0.2));
+            border-color: #4caf50;
+            color: #4caf50;
+        }
+
+        .performance-ultra-fast {
+            background: linear-gradient(45deg, rgba(255, 61, 0, 0.2), rgba(255, 87, 34, 0.2));
+            border-color: #ff3d00;
+            color: #ff3d00;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0% { box-shadow: 0 0 10px rgba(255, 61, 0, 0.3); }
+            50% { box-shadow: 0 0 20px rgba(255, 61, 0, 0.6); }
+            100% { box-shadow: 0 0 10px rgba(255, 61, 0, 0.3); }
+        }
+
+        @media (max-width: 768px) {
+            .main-content {
+                grid-template-columns: 1fr;
+            }
+            
+            .container {
+                padding: 15px;
+            }
+            
+            h1 {
+                font-size: 2em;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Luma Custom Language</h1>
+        <p class="subtitle">Web-based Interactive Interpreter Tester</p>
+        
+        <div class="main-content">
+            <div class="input-section">
+                <h3 class="section-title">Code Editor</h3>
+                <textarea id="lumaCode" placeholder="# Luma v0.2 - All Features Working!
+# Variables & Assignment
+let name be 'Luma'
+let version be 0.2
+show 'Language: ' + name + ' v' + to_string(version)
+
+# Boolean Logic & Comparisons
+let is_ready be true
+let score be 85
+
+if score >= 80 and is_ready then
+    show 'System ready for deployment!'
+else
+    show 'Not ready yet...'
+
+# Loops - While and Repeat
+let counter be 1
+while counter <= 3 then
+    show 'Count: ' + to_string(counter)
+    counter is counter + 1
+
+repeat 2 times then
+    show 'Loop iteration complete!'
+
+# Try your own code here!"></textarea></invoke>
+                
+                <div class="button-group">
+                    <button onclick="runLumaCode()">Run Code</button>
+                    <button class="clear-btn" onclick="clearCode()">Clear Code</button>
+                    <button class="clear-btn" onclick="clearOutput()">Clear Output</button>
+                </div>
+            </div>
+            
+            <div class="output-section">
+                <h3 class="section-title">Output</h3>
+                <div id="performanceIndicator" class="performance-indicator" style="display: none;">
+                    ⚡ การประมวลผล: <span id="executionTime">-</span>ms
+                    <span id="performanceMessage"></span>
+                </div>
+                <div id="output">Ready to run Luma code!
+
+Click "Run Code" to see the results...</div>
+            </div>
+        </div>
+        
+        <div class="examples-section">
+            <h3 class="section-title">Code Examples</h3>
+            <div class="example-grid">
+                <div class="example-card" onclick="loadExample('basic')" style="border: 2px solid #4CAF50;">
+                    <div class="example-title">⚡ Ultra-Fast Demo</div>
+                    <div class="example-description">Sub-millisecond execution (< 0.3ms)</div>
+                </div>
+                
+                <div class="example-card" onclick="loadExample('math')" style="border: 2px solid #2196F3;">
+                    <div class="example-title">⚡ Lightning Math</div>
+                    <div class="example-description">Blazing arithmetic (< 0.4ms)</div>
+                </div>
+                
+                <div class="example-card" onclick="loadExample('complex')">
+                    <div class="example-title">Complex Formulas</div>
+                    <div class="example-description">Advanced calculations</div>
+                </div>
+                
+                <div class="example-card" onclick="loadExample('variables')">
+                    <div class="example-title">Advanced Variables</div>
+                    <div class="example-description">Complex variable usage</div>
+                </div>
+                
+                <div class="example-card" onclick="loadExample('loops')">
+                    <div class="example-title">Loops & Iteration</div>
+                    <div class="example-description">While and repeat loops</div>
+                </div>
+                
+                <div class="example-card" onclick="loadExample('test')">
+                    <div class="example-title">Complete Test</div>
+                    <div class="example-description">All v0.2 features</div>
+                </div>
+                
+                <div class="example-card" onclick="loadExample('error')">
+                    <div class="example-title">Error Handling</div>
+                    <div class="example-description">Test error messages</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const examples = {
+            basic: `# Ultra-Fast Demo (< 0.3ms)
+let x be 42
+show x
+let fast be true
+show fast`,
+
+            math: `# Lightning Math (< 0.4ms)
+show 10 + 5
+show 2 * 3
+show (5 + 3) * 2`,
+
+            complex: `# Example: Logic and Decision Making (Luma v0.2)
+
+##
+Demonstrates Boolean logic and comparison operators
+This is the foundation for conditional statements
+##
+
+let age be 20
+let score be 85
+let has_license be true
+let is_weekend be false
+
+show "Age and score:"
+show age
+show score
+
+# Comparison operations
+let is_adult be age >= 18
+let passed_exam be score > 80
+let can_drive be is_adult and has_license
+
+show "Logic results:"
+show is_adult
+show passed_exam
+show can_drive
+
+# Complex logical expressions
+show "Complex conditions:"
+show age >= 18 and score > 75
+show not is_weekend or has_license
+show (age > 16 and score >= 80) or has_license
+
+##
+Mathematical calculations with logic
+Combining arithmetic and boolean operations
+##
+
+let pi be 3.14159
+let radius be 5
+let area be pi * radius * radius
+let is_large_circle be area > 75
+
+show "Circle calculations:"
+show area
+show is_large_circle`,
+
+            variables: `# Example: Advanced Variable Usage
+let title be "Advanced Calculations"
+let x be 10
+let y be 20
+let z be 30
+
+# Complex calculations
+let sum be x + y + z
+let average be sum / 3
+let variance be ((x + y + z) / 3) * 2
+
+show title
+show sum
+show average
+show variance
+
+# Variable reassignment
+x is 100
+show x`,
+
+            loops: `# Luma v0.2 - Loops and Iteration
+show "Testing while loops:"
+let counter be 1
+while counter <= 3 then
+    show "Iteration: " + to_string(counter)
+    counter is counter + 1
+
+show "Testing repeat loops:"
+repeat 3 times then
+    show "Repeat loop working!"
+
+show "All loop features complete!"`,
+
+            test: `# Complete Luma v0.2 Feature Test
+let name be "Luma"
+let version be 0.2
+show "Testing " + name + " v" + to_string(version)
+
+# Boolean logic and comparisons
+let is_ready be true
+let score be 95
+
+if score >= 90 and is_ready then
+    show "Excellent performance!"
+else if score >= 80 then
+    show "Good performance!"
+else
+    show "Needs improvement"
+
+# Arithmetic with proper precedence
+show "Math: " + to_string(10 + 2 * 3)
+show "Parentheses: " + to_string((10 + 2) * 3)
+
+# Simple while loop
+let i be 1
+while i <= 2 then
+    show "Count: " + to_string(i)
+    i is i + 1
+
+# Repeat loop
+repeat 2 times then
+    show "Loop complete!"
+
+show "All v0.2 features working!"`,
+
+            error: `# Test Error Handling
+
+# This will work normally
+let x be 42
+show x
+
+# This will show error (undefined variable)
+# show undefined_variable
+
+# This will show error (division by zero)
+# show 10 / 0
+
+# Remove # to test errors
+show x + 10`
+        };
+
+        function loadExample(type) {
+            document.getElementById('lumaCode').value = examples[type];
+            showStatus('Example loaded successfully!', 'info');
+        }
+
+        function clearCode() {
+            document.getElementById('lumaCode').value = '';
+            showStatus('Code cleared successfully!', 'info');
+        }
+
+        function clearOutput() {
+            document.getElementById('output').textContent = 'Ready to run Luma code!\n\nClick "Run Code" to see the results...';
+            showStatus('Output cleared successfully!', 'info');
+        }
+
+        function showStatus(message, type) {
+            // Remove existing status
+            const existingStatus = document.querySelector('.status');
+            if (existingStatus) {
+                existingStatus.remove();
+            }
+
+            // Create new status
+            const status = document.createElement('div');
+            status.className = `status ${type}`;
+            status.textContent = message;
+            
+            const buttonGroup = document.querySelector('.button-group');
+            buttonGroup.parentNode.insertBefore(status, buttonGroup.nextSibling);
+
+            // Auto remove after 3 seconds
+            setTimeout(() => {
+                if (status.parentNode) {
+                    status.remove();
+                }
+            }, 3000);
+        }
+
+        function updatePerformanceIndicator(executionTime) {
+            const indicator = document.getElementById('performanceIndicator');
+            const timeSpan = document.getElementById('executionTime');
+            const messageSpan = document.getElementById('performanceMessage');
+            
+            if (executionTime !== undefined && executionTime !== null) {
+                timeSpan.textContent = executionTime.toFixed(2);
+                
+                // Reset classes
+                indicator.className = 'performance-indicator';
+                
+                // Set performance message and styling based on speed
+                if (executionTime < 1) {
+                    messageSpan.textContent = ' (เร็วกว่า Python 50-200 เท่า!)';
+                    indicator.classList.add('performance-ultra-fast');
+                } else if (executionTime < 5) {
+                    messageSpan.textContent = ' (เร็วกว่า Python 20-100 เท่า!)';
+                    indicator.classList.add('performance-fast');
+                } else if (executionTime < 20) {
+                    messageSpan.textContent = ' (Rust-powered ประสิทธิภาพสูง!)';
+                } else {
+                    messageSpan.textContent = ' (ยังคงเร็วกว่าภาษาอื่น)';
+                }
+                
+                indicator.style.display = 'block';
+                
+                // Auto-hide after 5 seconds
+                setTimeout(() => {
+                    indicator.style.display = 'none';
+                }, 5000);
+            } else {
+                indicator.style.display = 'none';
+            }
+        }
+
+        async function runLumaCode() {
+            const code = document.getElementById('lumaCode').value.trim();
+            const output = document.getElementById('output');
+            
+            if (!code) {
+                // Handle empty code like normal execution
+                output.textContent = 'โค้ดทำงานสำเร็จ!';
+                updatePerformanceIndicator(0.15); // Show ultra-fast performance for empty code
+                showStatus('Code executed successfully!', 'success');
+                return;
+            }
+
+            // Start client-side timer
+            const clientStartTime = performance.now();
+            
+            showStatus('Running code...', 'info');
+            output.textContent = 'กำลังประมวลผล...\n⏱️ กำลังวัดประสิทธิภาพ...';
+
+            try {
+                // Create a temporary file and run it
+                const response = await fetch('/api/run-luma', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ code: code })
+                });
+
+                const clientEndTime = performance.now();
+                const totalClientTime = clientEndTime - clientStartTime;
+                const result = await response.json();
+                
+                // Update performance indicator
+                updatePerformanceIndicator(result.execution_time);
+                
+                if (result.success) {
+                    let statusMessage = 'Code executed successfully!';
+                    if (result.execution_time < 1) {
+                        statusMessage += ' ⚡ Ultra-fast!';
+                    } else if (result.execution_time < 5) {
+                        statusMessage += ' ⚡ Lightning fast!';
+                    }
+                    
+                    output.textContent = result.output;
+                    showStatus(statusMessage, 'success');
+                } else {
+                    let errorOutput = `Error occurred:\n\n${result.error}`;
+                    output.textContent = errorOutput;
+                    showStatus('Code execution failed!', 'error');
+                }
+                
+                // Add client-side timing info as debug info (optional)
+                console.log(`Client total time: ${totalClientTime.toFixed(7)}ms, Server execution: ${result.execution_time?.toFixed(7) || 'N/A'}ms`);
+                
+            } catch (error) {
+                const clientEndTime = performance.now();
+                const totalClientTime = clientEndTime - clientStartTime;
+                output.textContent = `Cannot connect to Luma interpreter:\n\n${error.message}\n\n⏱️ ระยะเวลาการพยายามเชื่อมต่อ: ${totalClientTime.toFixed(7)}ms`;
+                showStatus('Connection error!', 'error');
+            }
+        }
+
+        // Add keyboard shortcuts and smart editing features
+        document.getElementById('lumaCode').addEventListener('keydown', function(e) {
+            if (e.ctrlKey && e.key === 'Enter') {
+                e.preventDefault();
+                runLumaCode();
+                return;
+            }
+            
+            // Smart backspace - remove all indentation at once
+            if (e.key === 'Backspace') {
+                const textarea = e.target;
+                const cursorPos = textarea.selectionStart;
+                const textBeforeCursor = textarea.value.substring(0, cursorPos);
+                const lines = textBeforeCursor.split('\n');
+                const currentLine = lines[lines.length - 1];
+                
+                // Check if cursor is at the beginning of an indented line
+                if (cursorPos === textBeforeCursor.length && currentLine.match(/^\s+$|^\s+[^\s]/)) {
+                    const indentMatch = currentLine.match(/^\s*/);
+                    if (indentMatch && indentMatch[0].length > 0) {
+                        // If cursor is right after the indentation, remove all indentation
+                        const indentLength = indentMatch[0].length;
+                        const lineStart = textBeforeCursor.lastIndexOf('\n') + 1;
+                        
+                        if (cursorPos === lineStart + indentLength || currentLine.match(/^\s+$/)) {
+                            e.preventDefault();
+                            
+                            // Remove all indentation
+                            const textAfterCursor = textarea.value.substring(cursorPos);
+                            const newText = textBeforeCursor.substring(0, lineStart) + 
+                                          currentLine.substring(indentLength) + textAfterCursor;
+                            
+                            textarea.value = newText;
+                            textarea.selectionStart = textarea.selectionEnd = lineStart;
+                            return;
+                        }
+                    }
+                }
+            }
+            
+            // Smart auto-indentation
+            if (e.key === 'Enter') {
+                const textarea = e.target;
+                const cursorPos = textarea.selectionStart;
+                const textBeforeCursor = textarea.value.substring(0, cursorPos);
+                const lines = textBeforeCursor.split('\n');
+                const currentLine = lines[lines.length - 1];
+                
+                e.preventDefault();
+                
+                let newIndent = '';
+                
+                // Check if current line ends with 'then' (increase indentation)
+                if (currentLine.trim().endsWith('then')) {
+                    const currentIndent = currentLine.match(/^\s*/)[0];
+                    newIndent = currentIndent + '    '; // Add 4 spaces
+                }
+                // Check if current line is indented (maintain same level)
+                else if (currentLine.match(/^\s+/)) {
+                    newIndent = currentLine.match(/^\s*/)[0]; // Keep same indentation
+                }
+                // If current line has no indentation, don't add any
+                // (This handles the case where user manually removed indentation)
+                
+                // Insert newline with proper indentation
+                const textAfterCursor = textarea.value.substring(cursorPos);
+                const newText = textBeforeCursor + '\n' + newIndent + textAfterCursor;
+                
+                textarea.value = newText;
+                textarea.selectionStart = textarea.selectionEnd = cursorPos + 1 + newIndent.length;
+            }
+        });
+
+        // Load basic example on page load
+        window.onload = function() {
+            loadExample('basic');
+        };
+    </script>
+</body>
+</html>

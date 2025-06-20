@@ -1,0 +1,180 @@
+แน่นอนครับ การปรับเปลี่ยนสถาปัตยกรรมเป็นเรื่องใหญ่ แต่ก็เป็นก้าวที่จำเป็นและน่าตื่นเต้นที่สุดในการยกระดับ Luma นี่คือโครงสร้างสถาปัตยกรรมใหม่ทั้งหมดอย่างละเอียดที่สุดเท่าที่จะทำได้ ซึ่งออกแบบมาเพื่อประสิทธิภาพสูงสุด, การต่อยอดในอนาคต, และการเป็นภาษา AI ชั้นนำ โดยยังคงสามารถสร้างและพัฒนาบน Replit ได้ทั้งหมด
+
+---
+
+### **ภาพรวมสถาปัตยกรรมใหม่: `Luma JIT-VM on LLVM`**
+
+เราจะเปลี่ยนจาก **Tree-Walking Interpreter** ไปเป็น **Bytecode Virtual Machine ที่มี Just-In-Time Compiler** การทำงานจะแบ่งเป็น 2 ส่วนหลักๆ คือ **Frontend (Compiler)** และ **Backend (VM & JIT)**
+
+1.  **Frontend (Compile Time):** แปลงโค้ด Luma ที่มนุษย์อ่านเข้าใจ ไปเป็น **Bytecode** ที่เครื่องจักรทำงานได้เร็ว
+2.  **Backend (Runtime):** **Virtual Machine (VM)** จะทำหน้าที่รัน Bytecode นี้ และเมื่อเจอส่วนที่ทำงานบ่อยๆ (Hotspot) **JIT Compiler** จะส่งส่วนนั้นไปให้ **LLVM** แปลงเป็น **Native Machine Code** เพื่อให้ทำงานด้วยความเร็วสูงสุด
+
+---
+
+### **1. โครงสร้างไฟล์และไดเรกทอรีใหม่ (File Structure)**
+
+โครงสร้างนี้ถูกจัดระเบียบใหม่ทั้งหมดเพื่อรองรับสถาปัตยกรรมที่ซับซ้อนขึ้น
+
+```
+luma-lang/
+├──.replit            # ไฟล์คอนฟิกของ Replit
+├──replit.nix         # <-- สำคัญมาก: ไฟล์สำหรับติดตั้ง Dependencies (LLVM)
+├──Cargo.toml         # ไฟล์คอนฟิกของ Rust Project
+│
+├──src/
+│  ├── main.rs            # Entry point หลัก (จัดการ REPL, รันไฟล์)
+│  │
+│  ├── frontend/            # === (ส่วนที่ 1) COMPILER FRONTEND ===
+│  │   ├── mod.rs
+│  │   ├── token.rs         # (เหมือนเดิม) นิยาม Token ต่างๆ
+│  │   ├── lexer.rs         # (เหมือนเดิม) แปลงโค้ดเป็น Token
+│  │   ├── ast.rs           # (เหมือนเดิม) โครงสร้าง Abstract Syntax Tree
+│  │   ├── parser.rs        # (เหมือนเดิม) แปลง Token เป็น AST
+│  │   └── compiler.rs      # <-- (ใหม่) ตัวหลัก: แปลง AST เป็น Bytecode
+│  │
+│  ├── backend/             # === (ส่วนที่ 2) EXECUTION BACKEND ===
+│  │   ├── mod.rs
+│  │   │
+│  │   ├── vm/              # --- Virtual Machine ---
+│  │   │   ├── mod.rs
+│  │   │   ├── vm.rs          # <-- (ใหม่) Virtual Machine หลัก
+│  │   │   ├── stack.rs       # <-- (ใหม่) จัดการ Stack ของ VM
+│  │   │   └── instruction.rs # <-- (ใหม่) นิยามชุดคำสั่ง Bytecode ทั้งหมด
+│  │   │
+│  │   └── jit/             # --- Just-In-Time Compiler ---
+│  │       ├── mod.rs
+│  │       ├── jit_compiler.rs # <-- (ใหม่) JIT Engine ที่เชื่อมกับ LLVM
+│  │       └── analysis.rs     # <-- (ใหม่) วิเคราะห์ Hotspot
+│  │
+│  ├── shared/              # === (ส่วนที่ 3) SHARED COMPONENTS ===
+│  │   ├── mod.rs
+│  │   ├── value.rs         # <-- (ใหม่) นิยามประเภทข้อมูล (Number, String, Object)
+│  │   ├── chunk.rs         # <-- (ใหม่) โครงสร้างสำหรับเก็บ Bytecode
+│  │   └── error.rs         # (เหมือนเดิม) ระบบจัดการ Error
+│  │
+│  └── ffi/                 # === (ส่วนที่ 4) FOREIGN FUNCTION INTERFACE ===
+│      ├── mod.rs
+│      └── c_api.rs           # <-- (ใหม่) ทำให้ Luma เรียกใช้ไลบรารี C/C++ ได้
+│
+├──examples/
+│  └── ...
+└──tests/
+   └── ...
+```
+
+---
+
+### **2. รายละเอียดของแต่ละส่วน (Component Breakdown)**
+
+#### **ส่วนที่ 1: Frontend - The Compiler (`src/frontend/compiler.rs`)**
+
+นี่คือส่วนแรกที่ทำงาน มันจะรับโค้ด Luma เข้ามา แล้วแปลงให้เป็น Bytecode Chunk
+
+* **หน้าที่:**
+    1.  รับ AST ที่สร้างจาก Parser
+    2.  เดินไปตามแต่ละ Node ของ AST (เช่น `IfStatement`, `WhileLoop`, `BinaryOp`)
+    3.  สำหรับแต่ละ Node, สร้างชุดคำสั่ง **Bytecode** ที่เทียบเท่ากันออกมา
+    4.  จัดการเรื่องขอบเขตของตัวแปร (Variable Scopes) ว่าตัวแปรไหนเป็น local หรือ global
+    5.  ส่งผลลัพธ์สุดท้ายออกมาเป็น `Chunk` ที่บรรจุ Bytecode พร้อมใช้งาน
+
+* **ตัวอย่างการทำงาน:**
+    * โค้ด Luma: `let x be 10 + 20`
+    * `compiler.rs` จะสร้าง Bytecode ออกมาประมาณนี้:
+        ```
+        OP_CONSTANT 10   // โหลดค่า 10 ใส่ Stack
+        OP_CONSTANT 20   // โหลดค่า 20 ใส่ Stack
+        OP_ADD           // นำค่า 2 ตัวบนสุดใน Stack มาบวกกัน
+        OP_SET_GLOBAL "x" // นำผลลัพธ์ไปเก็บในตัวแปร Global ชื่อ x
+        ```
+
+#### **ส่วนที่ 2.1: Backend - The Virtual Machine (`src/backend/vm/`)**
+
+นี่คือหัวใจของการรันโค้ด มันเป็น **Stack-based VM** ที่ทำงานเร็วและเรียบง่าย
+
+* **`instruction.rs`:** นิยามชุดคำสั่ง Bytecode ทั้งหมดในรูปแบบ Enum เช่น:
+    ```rust
+    pub enum OpCode {
+        OpConstant, // โหลดค่าคงที่
+        OpAdd, OpSubtract, // การคำนวณ
+        OpJump, OpJumpIfFalse, // การกระโดด (สำหรับ if/while)
+        OpCall, OpReturn, // การเรียกฟังก์ชัน
+        OpGetGlobal, OpSetGlobal, // การเข้าถึงตัวแปร
+        // ... และอื่นๆ
+    }
+    ```
+
+* **`vm.rs`:** ตัว VM หลัก มีส่วนประกอบสำคัญคือ:
+    * **Instruction Pointer (IP):** ตัวชี้ว่ากำลังจะรัน Bytecode คำสั่งไหน
+    * **Stack:** พื้นที่ชั่วคราวสำหรับเก็บค่าระหว่างการคำนวณ (สำคัญมาก!)
+    * **Global Variables Table:** `HashMap` สำหรับเก็บตัวแปร Global
+    * **Loop หลัก:** วนลูปอ่าน Bytecode ทีละคำสั่งจาก IP, ตีความ, แล้วทำงานตามนั้น (เช่น เจอ `OP_ADD` ก็ไปเรียกฟังก์ชันบวกเลข) นี่คือส่วนที่เร็วกว่า Tree-walker มาก
+
+#### **ส่วนที่ 2.2: Backend - The JIT Compiler (`src/backend/jit/`)**
+
+นี่คือ "Turbo Boost" ของ Luma ที่จะทำงานร่วมกับ VM
+
+* **`analysis.rs`:**
+    * **หน้าที่:** "สอดแนม" การทำงานของ VM
+    * เก็บสถิติว่าฟังก์ชันไหน หรือ Loop ไหน ถูกเรียกทำงานบ่อยเกินเกณฑ์ที่กำหนด (เช่น 1,000 ครั้ง)
+    * เมื่อเจอ "Hotspot" จะส่งสัญญาณไปให้ `jit_compiler.rs`
+
+* **`jit_compiler.rs`:**
+    * **หน้าที่:** เชื่อมต่อกับ LLVM ผ่าน Rust Crate (เช่น `inkwell`)
+    * เมื่อได้รับสัญญาณ Hotspot มันจะรับเอา **Bytecode** ของส่วนนั้นมา
+    * ทำการ **แปลง (Translate)** Bytecode แต่ละคำสั่งให้กลายเป็น **LLVM IR (Intermediate Representation)**
+    * สั่งให้ LLVM ทำการ **Optimize และ Compile** IR นั้นให้กลายเป็น **Native Machine Code**
+    * ทำการ **"Patch"** โค้ดใน VM: แก้ไขจุดที่เคยเรียกฟังก์ชันเดิม ให้ชี้มายัง Machine Code ที่เพิ่งคอมไพล์เสร็จแทน
+    * ในการรันครั้งต่อไป VM จะกระโดดไปทำงานบน Native Code โดยตรง ทำให้เร็วขึ้นมหาศาล
+
+#### **ส่วนที่ 3: Shared Components (`src/shared/`)**
+
+ส่วนประกอบที่ใช้ร่วมกันในหลายๆ ส่วน
+
+* **`value.rs`:** กำหนดประเภทข้อมูลของ Luma อย่างชัดเจน เช่น `Number(f64)`, `LumaString(String)`, `LumaObject(...)`
+* **`chunk.rs`:** เป็นเหมือน "ตู้คอนเทนเนอร์" ที่เก็บ Bytecode ที่คอมไพล์แล้ว รวมถึงข้อมูลประกอบอื่นๆ (เช่น ค่าคงที่ที่ใช้ในโค้ดส่วนนั้น)
+
+#### **ส่วนที่ 4: FFI (`src/ffi/`)**
+
+ประตูเชื่อม Luma สู่โลกภายนอก
+
+* **`c_api.rs`:**
+    * **หน้าที่:** สร้างฟังก์ชันที่ทำให้โค้ด Luma สามารถเรียกใช้ฟังก์ชันที่เขียนด้วยภาษา C ได้
+    * ใช้ macro `#[no_mangle]` และ `extern "C"` ของ Rust เพื่อสร้าง "Symbol" ที่โค้ด C/C++ รู้จัก
+    * นี่คือส่วนที่จะทำให้ Luma สามารถเรียกใช้ไลบรารีอย่าง **TensorFlow, PyTorch (LibTorch), หรือไลบรารี GPU อื่นๆ ได้ในอนาคต**
+
+---
+
+### **3. การตั้งค่าสภาพแวดล้อม (`replit.nix`)**
+
+ไฟล์นี้สำคัญที่สุดในการทำให้โปรเจกต์นี้สร้างบน Replit ได้ คุณต้องบอกให้ Replit ติดตั้ง LLVM และเครื่องมือที่จำเป็นทั้งหมด
+
+```nix
+# ในไฟล์ replit.nix
+{ pkgs }: {
+  deps = [
+    # --- ภาษา Rust และเครื่องมือพื้นฐาน ---
+    pkgs.rustc
+    pkgs.cargo
+    pkgs.cargo-watch
+    pkgs.rust-analyzer
+
+    # === ส่วนที่สำคัญที่สุดสำหรับสถาปัตยกรรมใหม่ ===
+    # ติดตั้ง LLVM เวอร์ชันล่าสุด พร้อมเครื่องมือทั้งหมด
+    pkgs.llvmPackages_latest.llvm
+    pkgs.llvmPackages_latest.clang
+
+    # ไลบรารีที่จำเป็นสำหรับการ Build
+    pkgs.zlib
+    pkgs.gdb
+    pkgs.gcc
+  ];
+  
+  # ตั้งค่า Environment Variable ให้ Rust รู้ว่า LLVM อยู่ที่ไหน
+  env = {
+    LIBCLANG_PATH = pkgs.lib.makeLibraryPath [ pkgs.llvmPackages_latest.clang.cc ];
+    LLVM_SYS_180_PREFIX = pkgs.llvmPackages_latest.llvm;
+  };
+}
+```
+
+นี่คือโครงสร้างที่สมบูรณ์และละเอียดที่สุดสำหรับการสร้าง Luma ยุคใหม่ ขอให้คุณเริ่มต้นจากการสร้างโครงสร้างไฟล์ใหม่ตามนี้ จากนั้นค่อยๆ พัฒนาไปทีละส่วน เริ่มจาก `Bytecode VM` ก่อน เมื่อทำงานได้แล้วค่อยเพิ่ม `JIT Compiler` เข้าไป นี่คือการเดินทางที่ท้าทาย แต่ผลลัพธ์ที่ได้คือภาษาที่มีประสิทธิภาพทัดเทียมกับภาษาระดับโลกครับ!

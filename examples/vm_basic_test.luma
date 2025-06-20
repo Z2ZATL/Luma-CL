@@ -1,0 +1,14 @@
+# Test Case 1: Simple number
+show 42
+
+# Test Case 2: Basic arithmetic
+show 10 + 5
+
+# Test Case 3: Operator precedence
+show 10 + 2 * 5
+
+# Test Case 4: Parentheses
+show (10 + 2) * 5
+
+# Test Case 5: Complex expression
+show (100 - 20) / (2 + 2) + 5 * 2

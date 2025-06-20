@@ -1,0 +1,19 @@
+# Control flow in Luma JIT-VM
+
+# If statements
+let age be 25
+if age >= 18 then
+    show "Adult"
+else
+    show "Minor"
+
+# While loops
+let counter be 0
+while counter < 5 then
+    show "Counter: " + counter
+    counter = counter + 1
+
+# Repeat loops
+show "Countdown:"
+repeat 3 times then
+    show "Tick!"
