@@ -2,14 +2,14 @@ use thiserror::Error;
 
 #[derive(Error, Debug)]
 pub enum LumaError {
-    #[error("Lexical error: {0}")]
-    LexError(String),
+    #[error("Lexical error at line {line}: {message}")]
+    LexError { message: String, line: usize },
 
-    #[error("Parse error: {0}")]
-    ParseError(String),
+    #[error("Parse error at line {line}: {message}")]
+    ParseError { message: String, line: usize },
 
-    #[error("Compile error: {0}")]
-    CompileError(String),
+    #[error("Compile error at line {line}: {message}")]
+    CompileError { message: String, line: usize },
 
     #[error("Runtime error: {0}")]
     RuntimeError(String),
@@ -26,6 +26,20 @@ pub enum LumaError {
 
     #[error("Serialization error: {0}")]
     SerializationError(#[from] bincode::Error),
+}
+
+impl LumaError {
+    pub fn parse_error(message: String, line: usize) -> Self {
+        LumaError::ParseError { message, line }
+    }
+    
+    pub fn lex_error(message: String, line: usize) -> Self {
+        LumaError::LexError { message, line }
+    }
+    
+    pub fn compile_error(message: String, line: usize) -> Self {
+        LumaError::CompileError { message, line }
+    }
 }
 
 impl From<String> for LumaError {

@@ -99,10 +99,10 @@ fn execute_file(filename: &str) -> Result<()> {
 fn execute_source_vm(source: &str, vm: &mut VM) -> Result<()> {
     // Frontend: Compile to bytecode
     let mut lexer = Lexer::new(source);
-    let tokens = lexer.tokenize().map_err(|e| LumaError::LexError(e.to_string()))?;
+    let tokens = lexer.tokenize().map_err(|e| LumaError::lex_error(e.to_string(), 1))?;
     
     let mut parser = Parser::new(tokens);
-    let statements = parser.parse().map_err(|e| LumaError::ParseError(e.to_string()))?;
+    let statements = parser.parse().map_err(|e| LumaError::parse_error(e.to_string(), 1))?;
     
     let mut compiler = Compiler::new();
     let chunk = compiler.compile(&statements)?;

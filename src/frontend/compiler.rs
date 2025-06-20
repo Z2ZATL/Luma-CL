@@ -232,7 +232,7 @@ impl Compiler {
             }
             
             Expression::FunctionCall { name: _, arguments: _ } => {
-                return Err(LumaError::CompileError("Function calls not implemented in JIT-VM".to_string()));
+                return Err(LumaError::compile_error("Function calls not implemented in JIT-VM".to_string(), 0));
             }
         }
         
@@ -261,7 +261,7 @@ impl Compiler {
 
     fn add_local(&mut self, name: String) -> Result<()> {
         if self.locals.len() >= u8::MAX as usize {
-            return Err(LumaError::CompileError("Too many local variables in scope".into()));
+            return Err(LumaError::compile_error("Too many local variables in scope".to_string(), 0));
         }
         
         self.locals.push(Local {

@@ -51,10 +51,10 @@ impl Parser {
             // Handle variable assignment with "is" syntax
             self.parse_variable_reassignment()
         } else {
-            Err(LumaError::ParseError(format!(
-                "Expected statement, found '{}'", 
-                self.peek()
-            )))
+            Err(LumaError::parse_error(
+                format!("Expected statement, found '{}'", self.peek()),
+                self.current_line()
+            ))
         }
     }
 
@@ -64,7 +64,7 @@ impl Parser {
         let name = if let Token::Identifier(name) = self.advance() {
             name.clone()
         } else {
-            return Err(LumaError::ParseError("Expected identifier after 'let'".to_string()));
+            return Err(LumaError::parse_error("Expected identifier after 'let'".to_string(), self.current_line()));
         };
         
         // Support both "be" and "is" after let
@@ -73,7 +73,7 @@ impl Parser {
         } else if self.check(&Token::Is) {
             self.consume(&Token::Is, "Expected 'is' after identifier")?;
         } else {
-            return Err(LumaError::ParseError("Expected 'be' or 'is' after identifier".to_string()));
+            return Err(LumaError::parse_error("Expected 'be' or 'is' after identifier".to_string(), self.current_line()));
         }
         
         let value = self.parse_expression()?;
@@ -85,7 +85,7 @@ impl Parser {
         let name = if let Token::Identifier(name) = self.advance() {
             name.clone()
         } else {
-            return Err(LumaError::ParseError("Expected identifier".to_string()));
+            return Err(LumaError::parse_error("Expected identifier".to_string(), self.current_line()));
         };
         
         // Support both "is" and "=" for reassignment
@@ -94,7 +94,7 @@ impl Parser {
         } else if self.check(&Token::Assign) {
             self.consume(&Token::Assign, "Expected '=' after identifier")?;
         } else {
-            return Err(LumaError::ParseError("Expected 'is' or '=' after identifier".to_string()));
+            return Err(LumaError::parse_error("Expected 'is' or '=' after identifier".to_string(), self.current_line()));
         }
         
         let value = self.parse_expression()?;
@@ -394,10 +394,10 @@ impl Parser {
             return Ok(expr);
         }
         
-        Err(LumaError::ParseError(format!(
-            "Expected expression, found '{}'", 
-            self.peek()
-        )))
+        Err(LumaError::parse_error(
+            format!("Expected expression, found '{}'", self.peek()),
+            self.current_line()
+        ))
     }
 
     fn check(&self, token_type: &Token) -> bool {
@@ -431,14 +431,20 @@ impl Parser {
         &self.tokens[self.current - 1]
     }
 
+    fn current_line(&self) -> usize {
+        // For simplicity, we'll estimate line number based on token position
+        // In a more sophisticated implementation, tokens would carry line info
+        self.current + 1
+    }
+
     fn consume(&mut self, token_type: &Token, message: &str) -> Result<&Token, LumaError> {
         if self.check(token_type) {
             Ok(self.advance())
         } else {
-            Err(LumaError::ParseError(format!(
-                "{}: expected '{}', found '{}'", 
-                message, token_type, self.peek()
-            )))
+            Err(LumaError::parse_error(
+                format!("{}: expected '{}', found '{}'", message, token_type, self.peek()),
+                self.current_line()
+            ))
         }
     }
 

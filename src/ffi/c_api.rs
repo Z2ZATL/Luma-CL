@@ -139,10 +139,10 @@ fn create_error_string(message: &str) -> *mut c_char {
 
 fn execute_luma_source(vm: &mut VM, source: &str) -> Result<(), LumaError> {
     let mut lexer = Lexer::new(source);
-    let tokens = lexer.tokenize().map_err(|e| LumaError::LexError(e.to_string()))?;
+    let tokens = lexer.tokenize().map_err(|e| LumaError::lex_error(e.to_string(), 1))?;
     
     let mut parser = Parser::new(tokens);
-    let statements = parser.parse().map_err(|e| LumaError::ParseError(e.to_string()))?;
+    let statements = parser.parse().map_err(|e| LumaError::parse_error(e.to_string(), 1))?;
     
     let mut compiler = Compiler::new();
     let chunk = compiler.compile(&statements)?;

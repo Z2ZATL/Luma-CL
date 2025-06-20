@@ -56,10 +56,10 @@ impl Lexer {
             ')' => Ok(Some(Token::RightParen)),
             ':' => {
                 // Colon is no longer used in Luma syntax
-                Err(LumaError::LexError(format!(
-                    "Unexpected character ':' at line {}, column {}. Use 'then' instead for control structures.",
-                    self.line, self.column
-                )))
+                Err(LumaError::lex_error(
+                    "Unexpected character ':'. Use 'then' instead for control structures.".to_string(),
+                    self.line
+                ))
             }
             ',' => Ok(Some(Token::Comma)),
             '=' => {
@@ -75,10 +75,10 @@ impl Lexer {
                     self.advance(); // Skip =
                     Ok(Some(Token::NotEqual))
                 } else {
-                    Err(LumaError::LexError(format!(
-                        "Unexpected character '!' at line {}, column {}. Did you mean '!='?",
-                        self.line, self.column - 1
-                    )))
+                    Err(LumaError::lex_error(
+                        "Unexpected character '!'. Did you mean '!='?".to_string(),
+                        self.line
+                    ))
                 }
             }
             '>' => {
@@ -182,10 +182,10 @@ impl Lexer {
             }
         }
         
-        Err(LumaError::LexError(format!(
-            "Unterminated multi-line comment starting at line {}",
+        Err(LumaError::lex_error(
+            "Unterminated multi-line comment".to_string(),
             start_line
-        )))
+        ))
     }
 
     fn read_number(&mut self) -> Result<Token, LumaError> {
@@ -197,10 +197,10 @@ impl Lexer {
         
         let number_str: String = self.input[start_pos..self.position].iter().collect();
         let number = number_str.parse::<f64>()
-            .map_err(|_| LumaError::LexError(format!(
-                "Invalid number '{}' at line {}, column {}",
-                number_str, self.line, self.column - number_str.len()
-            )))?;
+            .map_err(|_| LumaError::lex_error(
+                format!("Invalid number '{}'", number_str), 
+                self.line
+            ))?;
         
         Ok(Token::Number(number))
     }
@@ -331,9 +331,10 @@ impl Lexer {
         }
         
         if self.is_at_end() {
-            return Err(LumaError::LexError(format!(
-                "Unterminated string at line {}", self.line
-            )));
+            return Err(LumaError::lex_error(
+                "Unterminated string".to_string(),
+                self.line
+            ));
         }
         
         let string_content: String = self.input[start_pos..self.position].iter().collect();

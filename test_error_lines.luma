@@ -1,0 +1,9 @@
+# Test file for error line reporting
+let x be 42
+show x
+
+# This should cause an error on line 5
+show undefined_variable
+
+let y be 10
+show y
