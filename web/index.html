@@ -56,6 +56,28 @@
             padding: 20px;
         }
 
+        .editor-container {
+            position: relative;
+            display: flex;
+            background: #1e1e1e;
+            border: 2px solid #333;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        .line-numbers {
+            background: #2a2a2a;
+            color: #666;
+            padding: 15px 8px 15px 15px;
+            font-family: inherit;
+            font-size: 14px;
+            line-height: 1.5;
+            text-align: right;
+            user-select: none;
+            border-right: 1px solid #444;
+            min-width: 40px;
+        }
+
         .section-title {
             font-size: 1.3em;
             margin-bottom: 15px;
@@ -67,19 +89,19 @@
         #lumaCode {
             width: 100%;
             height: 300px;
-            background: #1e1e1e;
-            border: 2px solid #333;
-            border-radius: 8px;
+            background: transparent;
+            border: none;
             color: #fff;
             padding: 15px;
             font-family: inherit;
             font-size: 14px;
             line-height: 1.5;
-            resize: vertical;
+            resize: none;
             outline: none;
+            overflow-y: auto;
         }
 
-        #lumaCode:focus {
+        .editor-container:focus-within {
             border-color: #64b5f6;
             box-shadow: 0 0 10px rgba(100, 181, 246, 0.3);
         }
@@ -264,7 +286,9 @@
         <div class="main-content">
             <div class="input-section">
                 <h3 class="section-title">Code Editor</h3>
-                <textarea id="lumaCode" placeholder="# Luma v0.2 - All Features Working!
+                <div class="editor-container">
+                    <div class="line-numbers" id="lineNumbers">1</div>
+                    <textarea id="lumaCode" placeholder="# Luma v0.2 - All Features Working!
 # Variables & Assignment
 let name be 'Luma'
 let version be 0.2
@@ -288,7 +312,8 @@ while counter <= 3 then
 repeat 2 times then
     show 'Loop iteration complete!'
 
-# Try your own code here!"></textarea></invoke>
+# Try your own code here!"></textarea>
+                </div></invoke>
                 
                 <div class="button-group">
                     <button onclick="runLumaCode()">Run Code</button>
@@ -492,11 +517,25 @@ show x + 10`
 
         function loadExample(type) {
             document.getElementById('lumaCode').value = examples[type];
+            updateLineNumbers();
             showStatus('Example loaded successfully!', 'info');
+        }
+
+        function updateLineNumbers() {
+            const textarea = document.getElementById('lumaCode');
+            const lineNumbers = document.getElementById('lineNumbers');
+            const lines = textarea.value.split('\n').length;
+            
+            let numbers = '';
+            for (let i = 1; i <= lines; i++) {
+                numbers += i + '\n';
+            }
+            lineNumbers.textContent = numbers.trim();
         }
 
         function clearCode() {
             document.getElementById('lumaCode').value = '';
+            updateLineNumbers();
             showStatus('Code cleared successfully!', 'info');
         }
 
@@ -610,6 +649,9 @@ show x + 10`
                     showStatus(statusMessage, 'success');
                 } else {
                     let errorOutput = `Error occurred:\n\n${result.error}`;
+                    if (result.line_number) {
+                        errorOutput = `Error on line ${result.line_number}:\n\n${result.error}`;
+                    }
                     output.textContent = errorOutput;
                     showStatus('Code execution failed!', 'error');
                 }
@@ -623,6 +665,21 @@ show x + 10`
                 output.textContent = `Cannot connect to Luma interpreter:\n\n${error.message}\n\n⏱️ ระยะเวลาการพยายามเชื่อมต่อ: ${totalClientTime.toFixed(7)}ms`;
                 showStatus('Connection error!', 'error');
             }
+        }
+
+        // Initialize line numbers and add event listeners
+        document.addEventListener('DOMContentLoaded', function() {
+            updateLineNumbers();
+            
+            const textarea = document.getElementById('lumaCode');
+            textarea.addEventListener('input', updateLineNumbers);
+            textarea.addEventListener('scroll', syncScroll);
+        });
+
+        function syncScroll() {
+            const textarea = document.getElementById('lumaCode');
+            const lineNumbers = document.getElementById('lineNumbers');
+            lineNumbers.scrollTop = textarea.scrollTop;
         }
 
         // Add keyboard shortcuts and smart editing features

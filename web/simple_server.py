@@ -143,14 +143,32 @@ class LumaHandler(http.server.BaseHTTPRequestHandler):
                     })
                 else:
                     error_msg = result.stderr.strip() if result.stderr else 'Unknown error occurred'
+                    
+                    # Extract line number from error message if available
+                    line_number = None
+                    import re
+                    line_match = re.search(r'line (\d+)', error_msg)
+                    if not line_match:
+                        line_match = re.search(r'at line (\d+)', error_msg)
+                    if not line_match:
+                        line_match = re.search(r'Error on line (\d+)', error_msg)
+                    if line_match:
+                        line_number = int(line_match.group(1))
+                    
                     # Limit error message size
                     if len(error_msg) > 1000:
                         error_msg = error_msg[:1000] + "... (Error message truncated)"
-                    self.send_json({
+                    
+                    response_data = {
                         'success': False,
                         'error': error_msg,
                         'execution_time': execution_time
-                    })
+                    }
+                    
+                    if line_number:
+                        response_data['line_number'] = line_number
+                    
+                    self.send_json(response_data)
                     
             except subprocess.TimeoutExpired:
                 execution_time = 15000  # 15 seconds in milliseconds
