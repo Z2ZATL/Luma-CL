@@ -4,11 +4,12 @@ use crate::shared::LumaError;
 pub struct Parser {
     tokens: Vec<Token>,
     current: usize,
+    current_line: usize,
 }
 
 impl Parser {
     pub fn new(tokens: Vec<Token>) -> Self {
-        Self { tokens, current: 0 }
+        Self { tokens, current: 0, current_line: 1 }
     }
 
     pub fn parse(&mut self) -> Result<Vec<Statement>, LumaError> {
@@ -18,6 +19,7 @@ impl Parser {
             // Skip newlines at the beginning
             if self.check(&Token::Newline) {
                 self.advance();
+                self.current_line += 1;
                 continue;
             }
             
@@ -30,6 +32,7 @@ impl Parser {
             // Consume optional newline after statement
             if self.check(&Token::Newline) {
                 self.advance();
+                self.current_line += 1;
             }
         }
         
@@ -432,9 +435,7 @@ impl Parser {
     }
 
     fn current_line(&self) -> usize {
-        // For simplicity, we'll estimate line number based on token position
-        // In a more sophisticated implementation, tokens would carry line info
-        self.current + 1
+        self.current_line
     }
 
     fn consume(&mut self, token_type: &Token, message: &str) -> Result<&Token, LumaError> {

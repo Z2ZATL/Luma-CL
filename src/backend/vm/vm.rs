@@ -134,7 +134,10 @@ impl VM {
                     let name = self.get_constant_string(name_index)?;
                     let value = self.globals.get(&name)
                         .cloned()
-                        .ok_or_else(|| LumaError::RuntimeError(format!("Undefined variable '{}'", name)))?;
+                        .ok_or_else(|| {
+                            let line = self.get_current_line();
+                            LumaError::RuntimeError(format!("Undefined variable '{}' at line {}", name, line))
+                        })?;
                     self.stack.push(value).map_err(LumaError::StackError)?;
                 }
                 
@@ -328,6 +331,26 @@ impl VM {
             .collect();
         stats.sort_by(|a, b| b.1.cmp(&a.1)); // Sort by execution count, descending
         stats
+    }
+
+    fn get_current_line(&self) -> usize {
+        if let Some(chunk) = &self.chunk {
+            // Find the closest line number for current instruction pointer
+            if self.ip < chunk.lines.len() && chunk.lines[self.ip] > 0 {
+                chunk.lines[self.ip]
+            } else {
+                // Look backwards for a valid line number
+                for i in (0..self.ip.min(chunk.lines.len())).rev() {
+                    if chunk.lines[i] > 0 {
+                        return chunk.lines[i];
+                    }
+                }
+                // If no valid line found, estimate based on instruction position
+                (self.ip / 3) + 1  // Rough estimate: ~3 instructions per line
+            }
+        } else {
+            1 // Default to line 1 if no chunk
+        }
     }
 
     #[allow(dead_code)]

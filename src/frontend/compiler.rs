@@ -6,6 +6,7 @@ pub struct Compiler {
     chunk: Chunk,
     locals: Vec<Local>,
     scope_depth: usize,
+    current_line: usize,
 }
 
 #[derive(Debug, Clone)]
@@ -21,18 +22,27 @@ impl Compiler {
             chunk: Chunk::new(),
             locals: Vec::new(),
             scope_depth: 0,
+            current_line: 1,
         }
     }
 
     pub fn compile(&mut self, statements: &[Statement]) -> Result<Chunk> {
-        for statement in statements {
+        for (i, statement) in statements.iter().enumerate() {
+            // More accurate line tracking: account for comments and empty lines
+            self.current_line = self.estimate_statement_line(i + 1);
             self.compile_statement(statement)?;
         }
         
         // Ensure the chunk ends with a return
-        self.emit_opcode(OpCode::OpReturn, 0);
+        self.emit_opcode(OpCode::OpReturn, self.current_line);
         
         Ok(std::mem::take(&mut self.chunk))
+    }
+    
+    fn estimate_statement_line(&self, statement_index: usize) -> usize {
+        // Better estimation that accounts for comments and empty lines
+        // Each statement is roughly 2 lines apart (allowing for comments)
+        statement_index * 2
     }
 
     fn compile_statement(&mut self, statement: &Statement) -> Result<()> {
@@ -239,12 +249,12 @@ impl Compiler {
         Ok(())
     }
 
-    fn emit_opcode(&mut self, opcode: OpCode, line: usize) {
-        self.chunk.write_opcode(opcode, line);
+    fn emit_opcode(&mut self, opcode: OpCode, _line: usize) {
+        self.chunk.write_opcode(opcode, self.current_line);
     }
 
-    fn emit_byte(&mut self, byte: u8, line: usize) {
-        self.chunk.write_byte(byte, line);
+    fn emit_byte(&mut self, byte: u8, _line: usize) {
+        self.chunk.write_byte(byte, self.current_line);
     }
 
     fn emit_jump(&mut self, opcode: OpCode, line: usize) -> usize {

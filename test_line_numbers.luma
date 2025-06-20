@@ -1,0 +1,12 @@
+# Line 1: This is a comment
+let x be 42
+# Line 3: Another comment
+let y be x + 10
+show y
+
+# Line 7: This should cause an error
+show undefined_var
+
+# Line 9: More code after error
+let z be 100
+show z
