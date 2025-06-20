@@ -1,0 +1,54 @@
+## ===============================================
+## Luma Bytecode VM - Phase 1 Test Suite
+## ===============================================
+##
+## ชุดทดสอบนี้จะตรวจสอบการทำงานพื้นฐานของ VM:
+## 1. การโหลดค่าคงที่ (Literals)
+## 2. การคำนวณพื้นฐาน (+, -, *, /)
+## 3. ลำดับความสำคัญของ Operator (Precedence)
+## 4. การทำงานของวงเล็บ (Parentheses)
+##
+
+# --- 1.1: ทดสอบค่าคงที่ (Literals) ---
+show "Testing Literals..."
+show 42          # Test Case 1: Positive Integer
+show 3.14159     # Test Case 2: Floating Point Number
+show 0           # Test Case 3: Zero
+show ""          # แสดงผลบรรทัดว่างเพื่อจัดรูปแบบ
+
+# --- 1.2: ทดสอบการคำนวณพื้นฐาน (Basic Arithmetic) ---
+show "Testing Basic Arithmetic..."
+show 100 + 25    # Test Case 4: Addition (Expected: 125)
+show 100 - 25    # Test Case 5: Subtraction (Expected: 75)
+show 10 * 5      # Test Case 6: Multiplication (Expected: 50)
+show 100 / 4     # Test Case 7: Division (Expected: 25)
+show ""
+
+# --- 1.3: ทดสอบลำดับการทำงาน (Operator Precedence) ---
+show "Testing Operator Precedence..."
+# Test Case 8: Multiplication before Addition
+# 5 * 2 จะต้องทำงานก่อน -> 10, จากนั้น 10 + 10 = 20
+show 10 + 5 * 2  # Expected: 20
+
+# Test Case 9: Division before Subtraction
+# 8 / 2 จะต้องทำงานก่อน -> 4, จากนั้น 20 - 4 = 16
+show 20 - 8 / 2  # Expected: 16
+show ""
+
+# --- 1.4: ทดสอบวงเล็บ (Parentheses) ---
+show "Testing Parentheses..."
+# Test Case 10: วงเล็บเปลี่ยนลำดับการทำงาน
+# (10 + 5) จะต้องทำงานก่อน -> 15, จากนั้น 15 * 2 = 30
+show (10 + 5) * 2 # Expected: 30
+show ""
+
+# --- การทดสอบที่ซับซ้อนขึ้น ---
+show "Testing Complex Expression..."
+# (100 - 20) / (2 + 2) + 5 * 2
+# -> 80 / 4 + 10
+# -> 20 + 10
+# -> 30
+show (100 - 20) / (2 + 2) + 5 * 2 # Expected: 30
+
+show "Phase 1 Test Complete!"
+show undefined_variable_here

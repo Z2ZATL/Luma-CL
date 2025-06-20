@@ -112,14 +112,12 @@ impl Lexer {
                 Ok(Some(self.read_string('\'')?))
             }
             '#' => {
-                // Check for multi-line comment ##
+                // Both ## and # are treated as single-line comments
                 if !self.is_at_end() && self.current_char() == '#' {
                     self.advance(); // Skip second #
-                    self.skip_multiline_comment()?;
-                } else {
-                    // Single-line comment - skip to end of line
-                    self.skip_comment();
                 }
+                // Skip to end of line for both # and ##
+                self.skip_comment();
                 self.next_token()
             }
             _ if ch.is_ascii_digit() => {
