@@ -326,6 +326,15 @@ impl Parser {
             });
         }
         
+        if self.check(&Token::Minus) {
+            self.advance();
+            let operand = self.parse_unary()?;
+            return Ok(Expression::UnaryOp {
+                operator: UnaryOperator::Minus,
+                operand: Box::new(operand),
+            });
+        }
+        
         self.parse_primary()
     }
 

@@ -145,6 +145,15 @@ The binary is built using standard Rust tooling (`cargo build`) and can be distr
 
 ## Recent Changes
 
+- June 20, 2025: MIGRATION TO REPLIT COMPLETE - Project successfully migrated from Replit Agent to standard Replit environment
+  - ✓ Fixed Phase 1 bytecode VM unary negation support (missing component)  
+  - ✓ Parser now properly handles negative numbers (-42, --42, -(10+5))
+  - ✓ UnaryOperator::Minus correctly mapped to OpCode::OpNegate in compiler
+  - ✓ All 27 comprehensive Phase 1 test cases now passing
+  - ✓ Client-server separation maintained with security best practices
+  - ✓ Web interface and command-line interpreter both operational
+  - ✓ Complete arithmetic operations with proper precedence working
+  - ✓ Migration checklist completed with all dependencies verified
 - June 20, 2025: BYTECODE VM PHASE 2 COMPLETE - Variables and global state fully functional
   - ✓ Implemented OpDefineGlobal and OpGetGlobal opcodes for variable handling
   - ✓ Fixed VM global variable storage and retrieval with HashMap

@@ -1,0 +1,42 @@
+# === COMPREHENSIVE PHASE 1 TESTS ===
+
+# Basic constants
+show 42
+show -17
+show 0
+show 3.14159
+show -2.5
+
+# Simple arithmetic
+show 10 + 5
+show 10 - 5  
+show 10 * 5
+show 10 / 5
+show 10 % 3
+
+# Operator precedence tests
+show 2 + 3 * 4        # Should be 14 (3*4=12, then 2+12=14)
+show 2 * 3 + 4        # Should be 10 (2*3=6, then 6+4=10)
+show 20 - 3 * 2       # Should be 14 (3*2=6, then 20-6=14)
+show 20 / 4 + 3       # Should be 8 (20/4=5, then 5+3=8)
+
+# Parentheses override precedence
+show (2 + 3) * 4      # Should be 20 (2+3=5, then 5*4=20)
+show 2 * (3 + 4)      # Should be 14 (3+4=7, then 2*7=14)
+show (20 - 4) / 4     # Should be 4 (20-4=16, then 16/4=4)
+
+# Complex nested expressions
+show ((2 + 3) * 4) - 1    # Should be 19 ((2+3)*4 = 20, then 20-1=19)
+show 2 + (3 * (4 + 1))    # Should be 17 (4+1=5, 3*5=15, 2+15=17)
+
+# Unary negation
+show -42
+show --42             # Double negative should be positive 42
+show -(10 + 5)        # Should be -15
+
+# Edge cases
+show 0 + 0
+show 0 * 100
+show 100 * 0
+show 0 / 1            # Should be 0
+# show 1 / 0          # This should cause division by zero error (commented out)
