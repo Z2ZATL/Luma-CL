@@ -66,10 +66,8 @@ impl Compiler {
                 continue;
             }
             
-            // Count actual statements
-            if trimmed.starts_with("let ") || trimmed.starts_with("show ") || 
-               trimmed.starts_with("if ") || trimmed.starts_with("while ") || 
-               trimmed.starts_with("repeat ") {
+            // Count actual statements - check for any non-comment, non-empty line
+            if !trimmed.is_empty() {
                 if statement_count == statement_index {
                     return line_num + 1; // Convert to 1-based line number
                 }

@@ -1,0 +1,10 @@
+# This is line 1 - a comment
+let x be 42
+# This is line 3 - another comment  
+let y be x + 10
+# This is line 5 - more comments
+show y
+# This is line 7 - comment before error
+show undefined_variable
+# This is line 9 - comment after error
+let z be 100

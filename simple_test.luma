@@ -1,0 +1,3 @@
+let x be 42
+show x
+show unknown_variable
