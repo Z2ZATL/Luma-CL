@@ -1,3 +1,5 @@
-let x be 42
-show x
-show unknown_variable
+show "Line 1"
+show "Line 2"
+show "Line 3"
+show "Line 4"
+show error_on_line_5

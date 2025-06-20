@@ -1,10 +1,31 @@
-# This is line 1 - a comment
+## ===============================================
+## Complex test with mixed comment styles
+## ===============================================
+## 
+## This tests line number accuracy with:
+## - Multi-line comment blocks (##)
+## - Single line comments (#)
+## - Mixed Thai and English content
+## - Empty lines
+##
+
+# This is line 12 with a regular comment
+show "Hello World"
+
+## Another comment block
+## spanning multiple lines
+## with Thai text: ทดสอบภาษาไทย
+##
+
+# Regular comment on line 20
 let x be 42
-# This is line 3 - another comment  
-let y be x + 10
-# This is line 5 - more comments
-show y
-# This is line 7 - comment before error
-show undefined_variable
-# This is line 9 - comment after error
-let z be 100
+
+## More comments
+## ทดสوบ
+##
+
+show x        # This is line 26
+
+# Now let's create an error on a specific line
+# The next line (line 30) will have an undefined variable
+show undefined_var_on_line_30

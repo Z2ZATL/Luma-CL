@@ -61,18 +61,17 @@ impl Compiler {
         
         for (line_num, line) in source_lines.iter().enumerate() {
             let trimmed = line.trim();
-            // Skip empty lines and comments
-            if trimmed.is_empty() || trimmed.starts_with('#') {
+            
+            // Skip empty lines and comments (both # and ##)
+            if trimmed.is_empty() || trimmed.starts_with("##") || trimmed.starts_with('#') {
                 continue;
             }
             
-            // Count actual statements - check for any non-comment, non-empty line
-            if !trimmed.is_empty() {
-                if statement_count == statement_index {
-                    return line_num + 1; // Convert to 1-based line number
-                }
-                statement_count += 1;
+            // This is an actual statement line
+            if statement_count == statement_index {
+                return line_num + 1; // Convert to 1-based line number
             }
+            statement_count += 1;
         }
         
         // Fallback estimation
